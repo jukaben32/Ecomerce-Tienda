@@ -13,10 +13,10 @@
   <meta name="description" content="ModaNueva: ropa y accesorios para mujer, hombre y niños. Envíos a todo el país.">
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23B5472B%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2722%27 font-family=%27Georgia%27 font-style=%27italic%27 text-anchor=%27middle%27 fill=%27%23F4EFE6%27%3EM%3C/text%3E%3C/svg%3E">
-  <!-- Tipografías: Fraunces (títulos) + DM Sans (texto) -->
+  <!-- Tipografías: Newsreader (títulos) + DM Sans (texto) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,700;1,6..72,500&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS (CDN) con la paleta de ModaNueva -->
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
@@ -32,7 +32,7 @@
             salvia: '#5F6F52'   // acento secundario (éxito)
           },
           fontFamily: {
-            display: ['Fraunces', 'Georgia', 'serif'],
+            display: ['Newsreader', 'Georgia', 'serif'],
             sans: ['"DM Sans"', 'system-ui', 'sans-serif']
           }
         }
@@ -40,16 +40,10 @@
     };
   </script>
   <style>
-    /* Grano sutil de papel sobre el fondo */
+    /* Fondo liso de papel */
     body {
       background-color: #F4EFE6;
-      background-image: radial-gradient(rgba(28,26,23,.045) 1px, transparent 1px);
-      background-size: 4px 4px;
     }
-    /* Cinta de texto en movimiento (se detiene si el usuario pide menos movimiento) */
-    @keyframes cinta { to { transform: translateX(-50%); } }
-    .cinta { animation: cinta 28s linear infinite; }
-    @media (prefers-reduced-motion: reduce) { .cinta { animation: none; } }
     dialog::backdrop { background: rgba(28,26,23,.55); backdrop-filter: blur(2px); }
   </style>
 </head>
@@ -109,13 +103,10 @@
       </div>
     </section>
 
-    <!-- Cinta con beneficios -->
-    <div class="overflow-hidden border-y border-tinta/15 bg-tinta py-3 text-papel" aria-hidden="true">
-      <div class="cinta flex w-max gap-10 whitespace-nowrap font-display text-lg italic">
-        <span>Envío rápido</span><span>·</span><span>Cambios por 30 días</span><span>·</span><span>Pago seguro</span><span>·</span><span>Moda para toda la familia</span><span>·</span>
-        <span>Envío rápido</span><span>·</span><span>Cambios por 30 días</span><span>·</span><span>Pago seguro</span><span>·</span><span>Moda para toda la familia</span><span>·</span>
-      </div>
-    </div>
+    <!-- Franja con beneficios (estática) -->
+    <ul class="flex flex-wrap justify-center gap-x-10 gap-y-2 border-y border-tinta/15 bg-tinta px-4 py-3 font-display text-lg italic text-papel">
+      <li>Envío rápido</li><li>Cambios por 30 días</li><li>Pago seguro</li><li>Moda para toda la familia</li>
+    </ul>
 
     <!-- ============ Catálogo ============ -->
     <section id="catalogo" class="mx-auto max-w-6xl px-4 py-14 md:py-20">
