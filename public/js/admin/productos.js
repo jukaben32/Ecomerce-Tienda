@@ -162,7 +162,7 @@ export function montar() {
         <label class="block text-sm font-medium">Descripción <textarea name="descripcion" rows="2" maxlength="600" class="campo"></textarea></label>
         <div class="grid gap-3 sm:grid-cols-3">
           <label class="block text-sm font-medium">Categoría <select name="categoria_id" id="selCategoria" class="campo"></select></label>
-          <label class="block text-sm font-medium">Precio (COP) <input name="precio" type="number" min="0" step="1" required class="campo"></label>
+          <label class="block text-sm font-medium">Precio (RD$) <input name="precio" type="number" min="0" step="1" required class="campo"></label>
           <label class="block text-sm font-medium">Existencias <input name="existencias" type="number" min="0" step="1" required value="0" class="campo"></label>
         </div>
         <div class="grid gap-3 sm:grid-cols-3">

@@ -326,6 +326,24 @@
     </form>
   </dialog>
 
+  <!-- ============ Comprobante de transferencia ============ -->
+  <dialog id="dlgComprobante" class="m-auto w-[min(94vw,30rem)] rounded-3xl bg-papel p-0 text-tinta shadow-2xl">
+    <form id="formComprobante" class="space-y-4 p-6">
+      <div class="flex items-center justify-between gap-3">
+        <h2 id="tituloComprobante" class="font-display text-2xl font-bold">Comprobante de transferencia</h2>
+        <button type="button" data-cerrar class="rounded-full px-3 py-1 text-sm hover:bg-crema" aria-label="Cerrar">✕</button>
+      </div>
+      <div id="datosTransferencia" class="space-y-3 text-sm"></div>
+      <label class="block text-sm font-medium">Comprobante (foto o PDF, máx. 5 MB)
+        <input id="archivoComprobante" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required class="campo">
+      </label>
+      <div class="flex gap-2">
+        <button type="submit" class="boton-principal">Enviar comprobante</button>
+        <button type="button" data-cerrar class="shrink-0 rounded-full border border-tinta/30 px-5 text-sm font-medium hover:bg-tinta hover:text-papel">Lo haré después</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Estilos reutilizables (campos, botones y pestañas) -->
   <style type="text/tailwindcss">
     @layer components {

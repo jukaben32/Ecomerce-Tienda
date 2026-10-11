@@ -11,8 +11,8 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 // Datos de la marca y la moneda
 export const NOMBRE_TIENDA = 'ModaNueva';
-export const MONEDA = 'COP';
-export const LOCALE = 'es-CO';
+export const MONEDA = 'DOP';   // peso dominicano (se muestra como RD$)
+export const LOCALE = 'es-DO';
 
 // ¿Ya configuraste Supabase? (sirve para mostrar un aviso si no)
 export const SUPABASE_CONFIGURADO =

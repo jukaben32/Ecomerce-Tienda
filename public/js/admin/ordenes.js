@@ -32,7 +32,7 @@ export async function cargar() {
   tbody.innerHTML = filaMensaje(6, 'Cargando…');
   let consulta = db
     .from('ordenes')
-    .select(`id, estado, total, subtotal, costo_envio, metodo_pago, canal, direccion_entrega, telefono_contacto, notas,
+    .select(`id, estado, total, subtotal, costo_envio, metodo_pago, canal, direccion_entrega, telefono_contacto, notas, comprobante_path, comprobante_subido_en,
              fuera_de_horario, realizada_en,
              perfiles(nombre, apellido, correo),
              items_orden(sku, nombre_producto, precio_unitario, cantidad, total_renglon)`)
@@ -73,10 +73,16 @@ function pintar() {
               ${ESTADOS.map((e) => `<option value="${e}" ${e === o.estado ? 'selected' : ''}>${e}</option>`).join('')}
             </select>
             ${o.fuera_de_horario && o.estado === 'pendiente' ? '<div class="mt-1 text-[10px] font-bold uppercase text-arcilla">Fuera de horario</div>' : ''}
+            ${o.estado === 'pendiente' && o.metodo_pago === 'transferencia'
+              ? (o.comprobante_path
+                  ? '<div class="mt-1 text-[10px] font-bold uppercase text-salvia">Comprobante recibido</div>'
+                  : '<div class="mt-1 text-[10px] font-bold uppercase text-tinta/50">Esperando comprobante</div>')
+              : ''}
           </td>
           <td class="whitespace-nowrap">${escaparHtml(formatearFecha(o.realizada_en))}</td>
           <td class="font-medium">${formatearPrecio(o.total)}</td>
           <td class="whitespace-nowrap text-right">
+            ${o.comprobante_path ? `<button type="button" data-ver-comprobante="${o.id}" class="boton-sec !px-3 !py-1">Comprobante</button>` : ''}
             ${o.estado === 'pendiente' ? `<button type="button" data-link-pago="${o.id}" class="boton-sec !px-3 !py-1" title="Genera un link de pago de Stripe para enviarlo al cliente">Link de pago</button>` : ''}
             <button type="button" data-ticket="${o.id}" class="boton-sec !px-3 !py-1">Ticket</button>
             <button type="button" data-detalle="${o.id}" class="boton-sec !px-3 !py-1" aria-expanded="false">Ver</button>
@@ -103,6 +109,28 @@ async function cambiarEstado(id, estado) {
   if (error) throw error;
   mostrarToast(`Orden #${id} → ${estado}`);
   await cargar();
+}
+
+/**
+ * Abre el comprobante de transferencia de una orden. El bucket es privado:
+ * se genera un enlace temporal (2 minutos) que solo puede pedir un admin.
+ */
+function verComprobante(id) {
+  const o = ordenes.find((x) => x.id === id);
+  if (!o?.comprobante_path) return;
+  // Abrimos la pestaña YA (dentro del clic) para que el navegador no la bloquee
+  const ventana = window.open('', '_blank');
+  seguro(async () => {
+    const { data, error } = await db.storage.from('comprobantes').createSignedUrl(o.comprobante_path, 120);
+    if (error) {
+      ventana?.close();
+      throw error;
+    }
+    if (ventana) {
+      ventana.opener = null;
+      ventana.location.href = data.signedUrl;
+    }
+  });
 }
 
 /** Genera el link de pago de Stripe de una orden pendiente y lo copia al portapapeles. */
@@ -199,6 +227,8 @@ export function montar() {
       verDetalle.textContent = oculto ? 'Ver' : 'Ocultar';
     }
     if (ticket) seguro(() => imprimirTicket(Number(ticket.dataset.ticket)));
+    const verComp = ev.target.closest('[data-ver-comprobante]');
+    if (verComp) verComprobante(Number(verComp.dataset.verComprobante));
     const linkPago = ev.target.closest('[data-link-pago]');
     if (linkPago) seguro(() => copiarLinkDePago(Number(linkPago.dataset.linkPago)));
   });

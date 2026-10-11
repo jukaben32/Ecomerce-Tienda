@@ -8,10 +8,22 @@ const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', '
 
 export const ETIQUETAS_PAGO = {
   efectivo: 'Efectivo contra entrega',
+  datafono: 'Tarjeta contra entrega (datáfono)',
   transferencia: 'Transferencia bancaria',
-  tarjeta: 'Tarjeta de crédito o débito (pago en línea)',
+  tarjeta: 'Tarjeta en línea (pago seguro)',
   link_pago: 'Link de pago'
 };
+
+/** Explicación corta bajo cada medio, en el checkout. */
+export const DESCRIPCION_PAGO = {
+  efectivo: 'Pagas en efectivo cuando recibes tu pedido.',
+  datafono: 'Pagas con tu tarjeta en el datáfono del mensajero.',
+  transferencia: 'Te mostramos la cuenta y subes la foto del comprobante.',
+  tarjeta: 'Pagas ahora con tarjeta en una página segura de Stripe.'
+};
+
+/** Orden en que se ofrecen los medios al cliente (la transferencia primero: es la más usada). */
+export const ORDEN_MEDIOS = ['transferencia', 'efectivo', 'datafono', 'tarjeta'];
 
 let cache = null;
 

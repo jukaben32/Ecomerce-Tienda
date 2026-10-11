@@ -7,8 +7,9 @@ import {
   formatearPrecio, escaparHtml, mostrarToast, abrirDialogo, cerrarDialogo, mensajeDeError
 } from './util.js';
 import {
-  cargarConfiguracion, ETIQUETAS_PAGO, calcularEnvio, estaEnHorario, textoHorario
+  cargarConfiguracion, ETIQUETAS_PAGO, DESCRIPCION_PAGO, ORDEN_MEDIOS, calcularEnvio, estaEnHorario, textoHorario
 } from './configuracion.js';
+import { abrirComprobante } from './comprobantes.js';
 import { listarDirecciones, guardarDireccion, direccionEnTexto } from './direcciones.js';
 import { irAPagar } from './api.js';
 
@@ -77,16 +78,16 @@ function pintarCheckout() {
 
       <fieldset class="space-y-2">
         <legend class="mb-2 text-sm font-bold uppercase tracking-widest text-tinta/60">2 · Medio de pago</legend>
-        ${cfg.medios_pago
+        ${ORDEN_MEDIOS.filter((m) => cfg.medios_pago.includes(m))
           .map(
             (m, i) => `
           <label class="${CLASE_OPCION}">
             <input type="radio" name="pago" value="${escaparHtml(m)}" class="mt-1 accent-arcilla" ${i === 0 ? 'checked' : ''}>
-            <span>${escaparHtml(ETIQUETAS_PAGO[m] ?? m)}</span>
+            <span><strong>${escaparHtml(ETIQUETAS_PAGO[m] ?? m)}</strong><br><span class="text-xs text-tinta/60">${escaparHtml(DESCRIPCION_PAGO[m] ?? '')}</span></span>
           </label>`
           )
           .join('')}
-        <p id="notaTransferencia" class="hidden whitespace-pre-line rounded-xl bg-crema px-4 py-3 text-sm">${escaparHtml(cfg.instrucciones_transferencia ?? 'Te enviaremos los datos de la cuenta para transferir.')}</p>
+        <p id="notaTransferencia" class="hidden whitespace-pre-line rounded-xl bg-crema px-4 py-3 text-sm">${escaparHtml(cfg.instrucciones_transferencia || 'Al confirmar el pedido te mostraremos los datos de la cuenta.')}</p>
       </fieldset>
 
       <label class="block text-sm font-medium">Notas para el pedido (opcional)
@@ -167,6 +168,8 @@ async function confirmar(ev) {
     contexto.alExito(data);
     // Pago con tarjeta: llevamos al cliente a la página segura de Stripe
     if (f.pago.value === 'tarjeta') await irAPagar(data.orden_id);
+    // Transferencia: mostramos la cuenta y pedimos el comprobante
+    if (f.pago.value === 'transferencia') await abrirComprobante({ ordenId: data.orden_id, total: data.total });
   } catch (err) {
     mostrarToast(mensajeDeError(err, 'No fue posible crear el pedido.'), true);
     contexto.alError?.();

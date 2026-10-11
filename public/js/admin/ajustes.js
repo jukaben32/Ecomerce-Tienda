@@ -7,13 +7,15 @@ import { cargarConfiguracion, ETIQUETAS_PAGO } from '../configuracion.js';
 import { $, seguro, numeroOnull, textoOnull } from './nucleo.js';
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const MEDIOS_CLIENTE = ['efectivo', 'transferencia', 'tarjeta'];
+const MEDIOS_CONTRA_ENTREGA = ['efectivo', 'datafono'];
+const MEDIOS_ANTICIPADOS = ['transferencia', 'tarjeta'];
 
 export async function cargar() {
   const cfg = await cargarConfiguracion(true);
   const f = $('formAjustes');
   f.nombre_tienda.value = cfg.nombre_tienda;
   f.telefono.value = cfg.telefono ?? '';
+  f.whatsapp.value = cfg.whatsapp ?? '';
   f.direccion.value = cfg.direccion ?? '';
   f.hora_inicio.value = cfg.hora_inicio.slice(0, 5);
   f.hora_fin.value = cfg.hora_fin.slice(0, 5);
@@ -40,11 +42,12 @@ async function guardar(f) {
   const datos = {
     nombre_tienda: f.nombre_tienda.value.trim() || 'ModaNueva',
     telefono: textoOnull(f.telefono.value),
+    whatsapp: textoOnull(f.whatsapp.value),
     direccion: textoOnull(f.direccion.value),
     hora_inicio: f.hora_inicio.value,
     hora_fin: f.hora_fin.value,
     dias_atencion: dias,
-    zona_horaria: f.zona_horaria.value.trim() || 'America/Bogota',
+    zona_horaria: f.zona_horaria.value.trim() || 'America/Santo_Domingo',
     mensaje_fuera_horario: f.mensaje_fuera_horario.value.trim(),
     costo_envio: Number(f.costo_envio.value) || 0,
     envio_gratis_desde: numeroOnull(f.envio_gratis_desde.value),
@@ -67,6 +70,8 @@ export function montar() {
         <h2 class="font-display text-xl font-bold">Tienda</h2>
         <label class="block text-sm font-medium">Nombre <input name="nombre_tienda" maxlength="80" class="campo"></label>
         <label class="block text-sm font-medium">Teléfono <input name="telefono" maxlength="30" class="campo"></label>
+        <label class="block text-sm font-medium">WhatsApp (para recibir comprobantes)
+          <input name="whatsapp" maxlength="30" placeholder="1809XXXXXXX" class="campo"></label>
         <label class="block text-sm font-medium">Dirección <input name="direccion" maxlength="200" class="campo"></label>
       </section>
 
@@ -87,19 +92,30 @@ export function montar() {
       <section class="space-y-3 rounded-2xl border border-tinta/15 bg-white/50 p-5">
         <h2 class="font-display text-xl font-bold">Envío y pedido mínimo</h2>
         <div class="grid grid-cols-3 gap-3">
-          <label class="block text-sm font-medium">Costo envío <input name="costo_envio" type="number" min="0" step="100" class="campo"></label>
-          <label class="block text-sm font-medium">Gratis desde <input name="envio_gratis_desde" type="number" min="0" step="1000" placeholder="Nunca" class="campo"></label>
-          <label class="block text-sm font-medium">Mínimo <input name="pedido_minimo" type="number" min="0" step="1000" class="campo"></label>
+          <label class="block text-sm font-medium">Costo envío <input name="costo_envio" type="number" min="0" step="any" class="campo"></label>
+          <label class="block text-sm font-medium">Gratis desde <input name="envio_gratis_desde" type="number" min="0" step="any" placeholder="Nunca" class="campo"></label>
+          <label class="block text-sm font-medium">Mínimo <input name="pedido_minimo" type="number" min="0" step="any" class="campo"></label>
         </div>
       </section>
 
       <section class="space-y-3 rounded-2xl border border-tinta/15 bg-white/50 p-5">
         <h2 class="font-display text-xl font-bold">Medios de pago</h2>
-        <div class="flex flex-wrap gap-x-5 gap-y-1">
-          ${MEDIOS_CLIENTE.map((m) => `<label class="flex items-center gap-1.5 text-sm"><input type="checkbox" name="medio" value="${m}" class="accent-arcilla"> ${ETIQUETAS_PAGO[m]}</label>`).join('')}
+        <div class="space-y-3">
+          <div>
+            <p class="mb-1 text-xs font-bold uppercase tracking-widest text-tinta/60">Pago contra entrega</p>
+            <div class="flex flex-wrap gap-x-5 gap-y-1">
+              ${MEDIOS_CONTRA_ENTREGA.map((m) => `<label class="flex items-center gap-1.5 text-sm"><input type="checkbox" name="medio" value="${m}" class="accent-arcilla"> ${ETIQUETAS_PAGO[m]}</label>`).join('')}
+            </div>
+          </div>
+          <div>
+            <p class="mb-1 text-xs font-bold uppercase tracking-widest text-tinta/60">Pago anticipado</p>
+            <div class="flex flex-wrap gap-x-5 gap-y-1">
+              ${MEDIOS_ANTICIPADOS.map((m) => `<label class="flex items-center gap-1.5 text-sm"><input type="checkbox" name="medio" value="${m}" class="accent-arcilla"> ${ETIQUETAS_PAGO[m]}</label>`).join('')}
+            </div>
+          </div>
         </div>
-        <label class="block text-sm font-medium">Instrucciones de transferencia
-          <textarea name="instrucciones_transferencia" rows="3" maxlength="500" placeholder="Banco, tipo y número de cuenta, titular…" class="campo"></textarea></label>
+        <label class="block text-sm font-medium">Datos para la transferencia (se muestran al cliente)
+          <textarea name="instrucciones_transferencia" rows="3" maxlength="500" placeholder="Banco Popular · Cuenta de ahorros 000-000000-0 · A nombre de … · Cédula/RNC …" class="campo"></textarea></label>
         <p class="text-xs text-tinta/60">Activa «Tarjeta» solo cuando Stripe esté configurado (llaves en Supabase). Si no, los clientes verían un error al pagar.</p>
       </section>
 

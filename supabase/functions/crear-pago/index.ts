@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
   if (!Number.isInteger(ordenId) || ordenId <= 0) return responder({ error: 'Orden inválida.' }, 400);
 
   const [{ data: orden }, { data: perfil }] = await Promise.all([
-    dbServicio.from('ordenes').select('id, cliente_id, estado, total, metodo_pago').eq('id', ordenId).maybeSingle(),
+    dbServicio.from('ordenes').select('id, cliente_id, estado, total, metodo_pago, moneda').eq('id', ordenId).maybeSingle(),
     dbServicio.from('perfiles').select('rol, correo').eq('id', usuario.id).maybeSingle()
   ]);
   if (!orden) return responder({ error: 'La orden no existe.' }, 404);
@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
     return responder({ error: 'Esta orden no es de pago con tarjeta.' }, 400);
   }
 
-  const centavos = Math.round(Number(orden.total) * 100); // COP usa 2 decimales en Stripe
+  const centavos = Math.round(Number(orden.total) * 100); // DOP, COP y USD usan 2 decimales en Stripe
   if (!Number.isFinite(centavos) || centavos <= 0) return responder({ error: 'Monto inválido.' }, 400);
 
   const origen = origenPermitido(req);
@@ -88,7 +88,7 @@ Deno.serve(async (req: Request) => {
     'payment_intent_data[metadata][tienda]': 'modanueva',
     'payment_intent_data[metadata][orden_id]': String(orden.id),
     'line_items[0][quantity]': '1',
-    'line_items[0][price_data][currency]': 'cop',
+    'line_items[0][price_data][currency]': String(orden.moneda).toLowerCase(),
     'line_items[0][price_data][unit_amount]': String(centavos),
     'line_items[0][price_data][product_data][name]': `Pedido #${orden.id} · ModaNueva`
   });

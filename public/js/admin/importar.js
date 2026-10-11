@@ -45,7 +45,7 @@ function normalizarClave(clave) {
  */
 function parsearPrecio(valor) {
   if (typeof valor === 'number') return valor;
-  const t = String(valor ?? '').replace(/[$\s]|COP/gi, '');
+  const t = String(valor ?? '').replace(/[$\s]|RD|DOP|COP/gi, '');
   if (t === '') return NaN;
   if (/^\d{1,3}([.,]\d{3})+([.,]\d+)?$/.test(t)) {
     // Separador de miles (45.000 / 1,234,567): el último separador es decimal solo si no es de miles
@@ -151,8 +151,8 @@ export async function confirmarImportacion(productos) {
 export function plantillaCsv() {
   const contenido =
     'sku,nombre,descripcion,precio,existencias,categoria,activo,imagen_url\n' +
-    'CAM-001,Camiseta básica blanca,Algodón 100%,45000,30,Hombre,si,\n' +
-    'VES-010,Vestido floral,Tela fresca,119900,12,Mujer,si,\n';
+    'CAM-001,Camiseta básica blanca,Algodón 100%,950,30,Hombre,si,\n' +
+    'VES-010,Vestido floral,Tela fresca,2400,12,Mujer,si,\n';
   const blob = new Blob(['﻿', contenido], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

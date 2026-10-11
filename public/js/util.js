@@ -8,7 +8,8 @@ export function formatearPrecio(valor) {
     return new Intl.NumberFormat(LOCALE, {
       style: 'currency',
       currency: MONEDA,
-      maximumFractionDigits: 0
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
     }).format(Number(valor) || 0);
   } catch {
     return `$${valor}`;

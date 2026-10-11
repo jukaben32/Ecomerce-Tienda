@@ -88,10 +88,10 @@ Deno.serve(async (req: Request) => {
   });
 
   // Defensa extra: el monto cobrado debe ser el total de la orden
-  const { data: orden } = await db.from('ordenes').select('total').eq('id', ordenId).maybeSingle();
+  const { data: orden } = await db.from('ordenes').select('total, moneda').eq('id', ordenId).maybeSingle();
   if (!orden) return respuesta({ error: 'Orden inexistente' }, 404);
   const esperado = Math.round(Number(orden.total) * 100);
-  if (sesion.currency !== 'cop' || sesion.amount_total !== esperado) {
+  if (sesion.currency !== String(orden.moneda).toLowerCase() || sesion.amount_total !== esperado) {
     console.error('stripe-webhook: monto no coincide', { ordenId, esperado, recibido: sesion.amount_total, moneda: sesion.currency });
     return respuesta({ error: 'Monto no coincide' }, 400);
   }

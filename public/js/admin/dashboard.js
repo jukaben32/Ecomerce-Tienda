@@ -4,6 +4,7 @@
 // Los números los calcula la función SQL resumen_ventas (solo admin).
 import { db } from '../supabaseClient.js';
 import { formatearPrecio, escaparHtml } from '../util.js';
+import { ETIQUETAS_PAGO } from '../configuracion.js';
 import { $, seguro, fechaISO } from './nucleo.js';
 
 const RANGOS = [
@@ -72,7 +73,7 @@ function pintar(r) {
     tarjetaKpi('Calificación', r.calificacion_promedio ? `${r.calificacion_promedio} ★` : '—', 'Promedio de clientes')
   ].join('');
   $('graficoDias').innerHTML = graficoDias(r.por_dia);
-  $('graficoMetodos').innerHTML = listaBarras(r.por_metodo, (f) => f.metodo.replace('_', ' '), (f) => f.ventas, (f) => formatearPrecio(f.ventas));
+  $('graficoMetodos').innerHTML = listaBarras(r.por_metodo, (f) => ETIQUETAS_PAGO[f.metodo] ?? f.metodo, (f) => f.ventas, (f) => formatearPrecio(f.ventas));
   $('graficoEstados').innerHTML = listaBarras(r.por_estado, (f) => f.estado, (f) => f.cantidad, (f) => f.cantidad);
   $('graficoTop').innerHTML = listaBarras(r.top_productos, (f) => f.nombre, (f) => f.unidades, (f) => `${f.unidades} u. · ${formatearPrecio(f.ventas)}`);
 }

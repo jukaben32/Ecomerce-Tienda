@@ -12,6 +12,7 @@ import {
 import { cargarConfiguracion } from './configuracion.js';
 import { abrirCheckout, conectarCheckout } from './checkout.js';
 import { cargarMisCompras, conectarCompras } from './compras.js';
+import { conectarComprobantes } from './comprobantes.js';
 import { cargarLibreta, conectarLibreta } from './direcciones.js';
 import { cargarPromociones, pintarBannerHorario, pintarDatosTienda } from './promos.js';
 import { conectarChat } from './chat.js';
@@ -512,6 +513,7 @@ async function iniciar() {
   conectarEventos();
   conectarCheckout();
   conectarCompras();
+  conectarComprobantes({ obtenerUsuario: () => usuario, alSubir: () => cargarMisCompras(usuario) });
   conectarLibreta(() => usuario.id);
   conectarChat({
     obtenerUsuario: () => usuario,

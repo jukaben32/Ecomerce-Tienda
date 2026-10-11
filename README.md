@@ -15,7 +15,10 @@ Tienda de ropa y accesorios hecha con **HTML + Tailwind CSS + JavaScript** y **S
 - Perfil: mis compras, direcciones, datos y contraseña
 - Calificación de pedidos entregados
 - **Asistente con IA**: escribe tu pedido o sube la foto de tu lista y llena el carrito (OpenRouter)
-- Pago con tarjeta en línea (Stripe) o transferencia bancaria
+- **Medios de pago pensados para República Dominicana** (el admin activa o desactiva cada uno):
+  - Contra entrega: **efectivo** y **tarjeta con datáfono**
+  - Anticipado: **transferencia bancaria** (el cliente sube el comprobante, también por WhatsApp) y **tarjeta en línea** (Stripe)
+- Moneda **peso dominicano (RD$)**, hora de Santo Domingo
 
 **Panel admin (`/admin.html`)**
 - Resumen de ventas (por día, medio de pago, más vendidos, calificación)
@@ -41,6 +44,7 @@ supabase/
   migrations/002_nivel_pro.sql  Direcciones, configuración, calificaciones, promociones, reportes, storage
   migrations/003_chat_y_pagos.sql  Límite de uso del chat y columnas de pago con Stripe
   migrations/004_cancelar_pagos_vencidos.sql  Cancela pagos con tarjeta abandonados y devuelve el stock
+  migrations/005_republica_dominicana.sql     Moneda DOP, datáfono y comprobantes de transferencia
   functions/chat/               Edge Function: asistente con IA (OpenRouter)
   functions/crear-pago/         Edge Function: crea la sesión de pago de Stripe
   functions/stripe-webhook/     Edge Function: confirma el pago (verifica la firma de Stripe)
@@ -53,6 +57,7 @@ supabase/
    2. `supabase/migrations/002_nivel_pro.sql`
    3. `supabase/migrations/003_chat_y_pagos.sql`
    4. `supabase/migrations/004_cancelar_pagos_vencidos.sql`
+   5. `supabase/migrations/005_republica_dominicana.sql`  (pone moneda DOP y hora de Santo Domingo)
 2. **Conexión:** pon tu *Project URL* y *anon key* en `public/js/config.js`
    (Supabase > Project Settings > API). **Nunca** pongas la `service_role key` ahí.
 3. **Probar en local:** `npm run dev` y abre http://localhost:3000
@@ -106,6 +111,21 @@ ignora todo lo que no la tenga, así que no se mezcla con los pagos de tus otros
 **Seguridad del chat:** exige sesión iniciada, limita 40 mensajes por usuario y hora, y la IA nunca crea pedidos:
 solo llena el carrito (el cliente confirma dirección y pago en el checkout).
 
+## Pagos: transferencia y contra entrega
+
+En el admin > **Configuración** > *Medios de pago* marcas cuáles ve el cliente:
+
+| Medio | Cómo funciona |
+|---|---|
+| Efectivo contra entrega | El cliente paga al recibir. |
+| Tarjeta contra entrega (datáfono) | El mensajero lleva el datáfono. |
+| Transferencia bancaria | Al pedir, el cliente ve la cuenta (la escribes en *Datos para la transferencia*) y sube la foto del comprobante. Tú lo ves en Órdenes (botón **Comprobante**) y cambias el estado a *pagada*. |
+| Tarjeta en línea | Pago seguro con Stripe; se marca *pagada* sola. |
+
+Los comprobantes se guardan en un bucket **privado**: solo el cliente dueño y los administradores pueden verlos
+(el admin los abre con un enlace temporal de 2 minutos). Escribe tu número en *WhatsApp* para que el cliente
+también pueda enviarlo por ahí.
+
 ## Importar productos (Excel / CSV)
 
 Descarga la plantilla desde Productos > "Descargar plantilla". Columnas obligatorias: `sku`, `nombre`, `precio`. Opcionales: `descripcion`, `existencias`, `categoria` (nombre o slug), `activo`, `imagen_url`. Si el SKU ya existe se actualiza.
@@ -114,6 +134,7 @@ Descarga la plantilla desde Productos > "Descargar plantilla". Columnas obligato
 
 - Actualizar precios con IA (por ejemplo, subir un % por categoría con lenguaje natural)
 - Pedidos de clientes sin cuenta (teléfono / WhatsApp)
+- Moneda y país: `supabase/schema.sql` trae valores de ejemplo en COP; la migración 005 los convierte a RD$.
 
 ## Publicarla
 
