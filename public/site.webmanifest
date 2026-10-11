@@ -1,0 +1,13 @@
+{
+  "name": "ModaNueva",
+  "short_name": "ModaNueva",
+  "description": "Ropa y accesorios para toda la familia. Moda para estrenar.",
+  "lang": "es-DO",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4EFE6",
+  "theme_color": "#F4EFE6",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

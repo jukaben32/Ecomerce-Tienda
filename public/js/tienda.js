@@ -16,6 +16,8 @@ import { conectarComprobantes } from './comprobantes.js';
 import { cargarLibreta, conectarLibreta } from './direcciones.js';
 import { cargarPromociones, pintarBannerHorario, pintarDatosTienda } from './promos.js';
 import { conectarChat } from './chat.js';
+import { iniciarSecciones, pintarCategorias } from './secciones.js';
+import { conectarSugerencias } from './sugerencias.js';
 
 const CLAVE_CARRITO = 'modanueva_carrito';
 
@@ -515,6 +517,18 @@ async function iniciar() {
   conectarCompras();
   conectarComprobantes({ obtenerUsuario: () => usuario, alSubir: () => cargarMisCompras(usuario) });
   conectarLibreta(() => usuario.id);
+  conectarSugerencias({ obtenerUsuario: () => usuario, abrirLogin: () => abrirDialogo('dlgAuth') });
+
+  // Los accesos de categoría de la portada filtran el catálogo
+  document.getElementById('gridCategorias').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-ir-categoria]');
+    if (!b) return;
+    categoriaSeleccionada = Number(b.dataset.irCategoria);
+    pintarFiltros();
+    pintarProductos();
+    document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' });
+  });
+
   conectarChat({
     obtenerUsuario: () => usuario,
     obtenerCarrito: () => carrito,
@@ -543,12 +557,14 @@ async function iniciar() {
     .then((cfg) => {
       pintarBannerHorario(cfg);
       pintarDatosTienda(cfg);
+      return iniciarSecciones({ cfg, abrirChat: () => abrirDialogo('dlgChat') });
     })
     .catch(() => {});
   cargarPromociones().catch(() => {});
 
   try {
     await Promise.all([cargarCategorias(), cargarProductos()]);
+    pintarCategorias(categorias, productos);
     sanearCarrito();
   } catch (err) {
     document.getElementById('gridProductos').innerHTML =

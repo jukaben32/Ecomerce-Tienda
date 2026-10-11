@@ -18,7 +18,21 @@
   <meta property="og:title" content="ModaNueva · Moda para estrenar">
   <meta property="og:description" content="Ropa y accesorios para toda la familia. Paga por transferencia, contra entrega o con tarjeta.">
 
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23B5472B%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2722%27 font-family=%27Georgia%27 font-style=%27italic%27 text-anchor=%27middle%27 fill=%27%23F4EFE6%27%3EM%3C/text%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://modanueva.vercel.app/">
+  <meta property="og:url" content="https://modanueva.vercel.app/">
+  <meta property="og:image" content="https://modanueva.vercel.app/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="ModaNueva: moda para estrenar">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ModaNueva · Moda para estrenar">
+  <meta name="twitter:image" content="https://modanueva.vercel.app/og-image.jpg">
+  <!-- Datos estructurados para buscadores (js/secciones.js los completa con tu horario, dirección y calificaciones) -->
+  <script type="application/ld+json" id="jsonld-negocio">
+  {"@context":"https://schema.org","@type":"ClothingStore","@id":"https://modanueva.vercel.app/#negocio","name":"ModaNueva","url":"https://modanueva.vercel.app/","logo":"https://modanueva.vercel.app/favicon.svg","image":"https://modanueva.vercel.app/og-image.jpg","description":"Ropa y accesorios para mujer, hombre y niños. Envíos en República Dominicana.","currenciesAccepted":"DOP","priceRange":"$$","areaServed":{"@type":"Country","name":"República Dominicana"},"paymentAccepted":"Efectivo, Transferencia bancaria, Tarjeta de crédito, Tarjeta de débito"}
+  </script>
   <!-- Tipografías: Newsreader (títulos) + DM Sans (texto) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,6 +48,12 @@
       <a href="/" class="font-display text-2xl font-bold tracking-tight" aria-label="ModaNueva, inicio">
         Moda<span class="italic text-arcilla">Nueva</span>
       </a>
+      <nav class="hidden items-center gap-1 md:flex" aria-label="Principal">
+        <a href="#catalogo" class="rounded-full px-3 py-1.5 text-sm font-medium text-tinta/70 transition hover:bg-crema hover:text-tinta">Catálogo</a>
+        <a href="#pagos" class="rounded-full px-3 py-1.5 text-sm font-medium text-tinta/70 transition hover:bg-crema hover:text-tinta">Pagos</a>
+        <a href="#opiniones" class="rounded-full px-3 py-1.5 text-sm font-medium text-tinta/70 transition hover:bg-crema hover:text-tinta">Opiniones</a>
+        <a href="#contacto" class="rounded-full px-3 py-1.5 text-sm font-medium text-tinta/70 transition hover:bg-crema hover:text-tinta">Contacto</a>
+      </nav>
       <div class="flex items-center gap-2">
         <!-- Visible si NO hay sesión -->
         <button id="btnEntrar" type="button" class="hidden rounded-full border border-tinta/25 px-4 py-2 text-sm font-medium transition hover:bg-tinta hover:text-papel focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-arcilla">
@@ -88,6 +108,15 @@
       <li>Envío rápido</li><li>Cambios por 30 días</li><li>Pago seguro</li><li>Moda para toda la familia</li>
     </ul>
 
+    <!-- ============ Categorías ============ -->
+    <section id="seccionCategorias" class="mx-auto hidden max-w-6xl px-4 pt-14">
+      <div class="mb-6 flex items-end justify-between gap-4">
+        <h2 class="font-display text-4xl font-bold tracking-tight">Compra por categoría</h2>
+        <a href="#catalogo" class="hidden text-sm font-medium text-arcilla underline-offset-4 hover:underline sm:block">Ver todo →</a>
+      </div>
+      <div id="gridCategorias" class="grid grid-cols-2 gap-3 md:grid-cols-4"></div>
+    </section>
+
     <!-- ============ Promociones / volantes ============ -->
     <section id="seccionPromos" class="mx-auto hidden max-w-6xl px-4 pt-14">
       <h2 class="mb-6 font-display text-4xl font-bold tracking-tight">Promociones</h2>
@@ -112,14 +141,87 @@
         <p class="col-span-full text-tinta/60">Cargando productos…</p>
       </div>
     </section>
+
+    <!-- ============ Cómo prefieres ordenar ============ -->
+    <section class="bg-tinta text-papel">
+      <div class="mx-auto max-w-6xl px-4 py-16 md:py-20">
+        <div class="text-center">
+          <p class="text-sm font-bold uppercase tracking-[0.2em] text-[#E5937A]">Haz tu pedido</p>
+          <h2 class="mt-3 font-display text-4xl font-bold md:text-5xl">¿Cómo prefieres <span class="italic text-[#E5937A]">ordenar?</span></h2>
+          <p class="mx-auto mt-4 max-w-xl text-papel/70">Elige la opción con la que te sientas más cómodo. Las dos son igual de rápidas y te damos la misma atención.</p>
+        </div>
+        <div id="gridOrdenar" class="mt-10 grid gap-5"></div>
+      </div>
+    </section>
+
+    <!-- ============ Calificaciones (solo si ya hay) ============ -->
+    <section id="seccionCalificaciones" class="hidden">
+      <div id="opiniones" class="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 md:py-20">
+        <h2 class="font-display text-4xl font-bold tracking-tight">Lo que dicen nuestros clientes</h2>
+        <div id="contenidoCalificaciones" class="mt-8"></div>
+      </div>
+    </section>
+
+    <!-- ============ Medios de pago ============ -->
+    <section id="pagos" class="scroll-mt-20 bg-crema/50">
+      <div class="mx-auto max-w-6xl px-4 py-16">
+        <h2 class="font-display text-4xl font-bold tracking-tight">Paga como prefieras</h2>
+        <p class="mt-2 max-w-xl text-tinta/70">Elige el medio de pago al cerrar tu pedido.</p>
+        <div id="gridPagos" class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"></div>
+        <p id="notaPagos" class="mt-5 text-sm text-tinta/60"></p>
+      </div>
+    </section>
+
+    <!-- ============ Cobertura y horario ============ -->
+    <section id="contacto" class="mx-auto max-w-6xl scroll-mt-20 px-4 py-16">
+      <div class="rounded-3xl border border-tinta/15 bg-white/60 p-8 md:p-10">
+        <h2 class="font-display text-3xl font-bold tracking-tight">Entregas y horario</h2>
+        <dl id="contenidoCobertura" class="mt-6 grid gap-6 sm:grid-cols-2"></dl>
+      </div>
+    </section>
+
+    <!-- ============ Tu opinión ============ -->
+    <section class="bg-arcilla text-white">
+      <div class="mx-auto max-w-4xl px-4 py-16 text-center">
+        <h2 class="font-display text-4xl font-bold tracking-tight">Tu opinión nos hace crecer</h2>
+        <p class="mx-auto mt-3 max-w-xl text-white/90">Queremos escucharte. Cuéntanos tu experiencia, si algo falló o cómo mejorar. Cada mensaje lo lee nuestro equipo.</p>
+        <div class="mt-8 grid gap-3 sm:grid-cols-3">
+          <button type="button" data-abrir-opinion="queja" class="rounded-2xl border border-white/30 bg-white/10 p-5 text-left transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><strong class="font-display text-xl">Queja</strong><span class="mt-1 block text-sm text-white/85">Algo no funcionó como esperabas.</span></button>
+          <button type="button" data-abrir-opinion="reclamo" class="rounded-2xl border border-white/30 bg-white/10 p-5 text-left transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><strong class="font-display text-xl">Reclamo</strong><span class="mt-1 block text-sm text-white/85">Un problema con un pedido o producto.</span></button>
+          <button type="button" data-abrir-opinion="sugerencia" class="rounded-2xl border border-white/30 bg-white/10 p-5 text-left transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><strong class="font-display text-xl">Sugerencia</strong><span class="mt-1 block text-sm text-white/85">Una idea para mejorar la tienda.</span></button>
+        </div>
+        <p class="mt-6 text-xs text-white/75">Necesitas iniciar sesión para enviar tu mensaje. Es rápido y gratis.</p>
+      </div>
+    </section>
   </main>
 
-  <footer class="border-t border-tinta/15">
-    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-8 text-sm text-tinta/60">
-      <span>&copy; <span id="anio"></span> ModaNueva. <span id="datosTienda"></span></span>
-      <a href="#" class="underline-offset-4 hover:text-arcilla hover:underline">Volver arriba ↑</a>
+  <footer class="border-t border-tinta/15 bg-crema/40">
+    <div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-3">
+      <div>
+        <p class="font-display text-2xl font-bold">Moda<span class="italic text-arcilla">Nueva</span></p>
+        <p class="mt-2 max-w-xs text-sm text-tinta/70">Ropa y accesorios para toda la familia. Moda para estrenar, todos los días.</p>
+      </div>
+      <div>
+        <p class="text-xs font-bold uppercase tracking-widest text-tinta/50">Contacto</p>
+        <div id="contactoPie" class="mt-3 text-sm text-tinta/80"></div>
+      </div>
+      <div>
+        <p class="text-xs font-bold uppercase tracking-widest text-tinta/50">Síguenos</p>
+        <div id="redesPie" class="mt-3 flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+    <div class="border-t border-tinta/10">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 text-sm text-tinta/60">
+        <span>&copy; <span id="anio"></span> ModaNueva. Todos los derechos reservados.</span>
+        <a href="#" class="underline-offset-4 hover:text-arcilla hover:underline">Volver arriba ↑</a>
+      </div>
     </div>
   </footer>
+
+  <!-- ============ WhatsApp flotante (aparece si configuras tu número) ============ -->
+  <a id="btnWhatsapp" href="#" target="_blank" rel="noopener" class="fixed bottom-20 right-5 z-30 hidden h-12 w-12 place-items-center rounded-full bg-[#25D366] text-tinta shadow-xl transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinta" aria-label="Escribirnos por WhatsApp">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.7-5.4A8.5 8.5 0 1 1 21 11.5Z"/></svg>
+  </a>
 
   <!-- ============ Asistente con IA ============ -->
   <button id="btnChat" type="button" class="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-arcilla px-5 py-3 text-sm font-medium text-white shadow-xl transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinta" aria-label="Abrir el asistente de ventas">
@@ -302,6 +404,26 @@
         <textarea name="comentario" rows="3" maxlength="500" class="campo"></textarea>
       </label>
       <button type="submit" class="boton-principal">Enviar calificación</button>
+    </form>
+  </dialog>
+
+  <!-- ============ Queja / reclamo / sugerencia ============ -->
+  <dialog id="dlgSugerencia" class="m-auto w-[min(94vw,30rem)] rounded-3xl bg-papel p-0 text-tinta shadow-2xl">
+    <form id="formSugerencia" class="space-y-4 p-6">
+      <div class="flex items-center justify-between gap-3">
+        <h2 id="tituloSugerencia" class="font-display text-2xl font-bold">Tu opinión</h2>
+        <button type="button" data-cerrar class="rounded-full px-3 py-1 text-sm hover:bg-crema" aria-label="Cerrar">✕</button>
+      </div>
+      <label class="block text-sm font-medium">Tipo
+        <select name="tipo" class="campo"><option value="queja">Queja</option><option value="reclamo">Reclamo</option><option value="sugerencia">Sugerencia</option></select>
+      </label>
+      <label class="block text-sm font-medium">Tu mensaje
+        <textarea name="mensaje" required minlength="5" maxlength="1000" rows="5" placeholder="Cuéntanos con detalle (si es de un pedido, indica el número)" class="campo"></textarea>
+      </label>
+      <label class="block text-sm font-medium">Teléfono o correo para responderte (opcional)
+        <input name="contacto" maxlength="120" class="campo">
+      </label>
+      <button type="submit" class="boton-principal">Enviar mensaje</button>
     </form>
   </dialog>
 

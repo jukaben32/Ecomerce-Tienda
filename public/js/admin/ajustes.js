@@ -16,6 +16,10 @@ export async function cargar() {
   f.nombre_tienda.value = cfg.nombre_tienda;
   f.telefono.value = cfg.telefono ?? '';
   f.whatsapp.value = cfg.whatsapp ?? '';
+  f.instagram.value = cfg.instagram ?? '';
+  f.facebook.value = cfg.facebook ?? '';
+  f.tiktok.value = cfg.tiktok ?? '';
+  f.cobertura.value = cfg.cobertura ?? '';
   f.direccion.value = cfg.direccion ?? '';
   f.hora_inicio.value = cfg.hora_inicio.slice(0, 5);
   f.hora_fin.value = cfg.hora_fin.slice(0, 5);
@@ -35,6 +39,14 @@ export async function cargar() {
   });
 }
 
+/** Las redes deben ser enlaces https:// (así nadie puede colar un "javascript:"). */
+function redSocial(valor, nombre) {
+  const t = textoOnull(valor);
+  if (!t) return null;
+  if (!/^https:\/\/\S+$/i.test(t)) throw new Error(`El enlace de ${nombre} debe empezar con https://`);
+  return t;
+}
+
 async function guardar(f) {
   const dias = [...f.querySelectorAll('[name="dia"]:checked')].map((c) => Number(c.value));
   const medios = [...f.querySelectorAll('[name="medio"]:checked')].map((c) => c.value);
@@ -43,6 +55,10 @@ async function guardar(f) {
     nombre_tienda: f.nombre_tienda.value.trim() || 'ModaNueva',
     telefono: textoOnull(f.telefono.value),
     whatsapp: textoOnull(f.whatsapp.value),
+    instagram: redSocial(f.instagram.value, 'Instagram'),
+    facebook: redSocial(f.facebook.value, 'Facebook'),
+    tiktok: redSocial(f.tiktok.value, 'TikTok'),
+    cobertura: textoOnull(f.cobertura.value),
     direccion: textoOnull(f.direccion.value),
     hora_inicio: f.hora_inicio.value,
     hora_fin: f.hora_fin.value,
@@ -73,6 +89,13 @@ export function montar() {
         <label class="block text-sm font-medium">WhatsApp (para recibir comprobantes)
           <input name="whatsapp" maxlength="30" placeholder="1809XXXXXXX" class="campo"></label>
         <label class="block text-sm font-medium">Dirección <input name="direccion" maxlength="200" class="campo"></label>
+        <label class="block text-sm font-medium">Zona de cobertura de domicilios
+          <textarea name="cobertura" rows="2" maxlength="400" placeholder="Ej: Distrito Nacional, Santo Domingo Este y Oeste, Los Alcarrizos…" class="campo"></textarea></label>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <label class="block text-sm font-medium">Instagram <input name="instagram" type="url" placeholder="https://instagram.com/…" class="campo"></label>
+          <label class="block text-sm font-medium">Facebook <input name="facebook" type="url" placeholder="https://facebook.com/…" class="campo"></label>
+          <label class="block text-sm font-medium">TikTok <input name="tiktok" type="url" placeholder="https://tiktok.com/@…" class="campo"></label>
+        </div>
       </section>
 
       <section class="space-y-3 rounded-2xl border border-tinta/15 bg-white/50 p-5">
