@@ -1,0 +1,10 @@
+{
+  "name": "modanueva",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Tienda online ModaNueva: HTML + Tailwind CSS + JavaScript sobre Supabase",
+  "scripts": {
+    "dev": "npx serve public -l 3000"
+  },
+  "license": "MIT"
+}

@@ -1,773 +1,491 @@
-/* admin.js
-   Propósito: Lógica de administración: listar órdenes con ítems y crear productos.
-   Relación: Interactúa con `/api/ordenes` y `/api/productos`. HTML en `public/admin.html`.
-*/
-(function () {
-	'use strict';
+// admin.js
+// Panel de administración (public/admin.html): órdenes, productos,
+// categorías y usuarios. Todo va directo a Supabase; las reglas RLS del
+// esquema SQL son las que realmente impiden que un no-admin haga cambios.
+import { db } from './supabaseClient.js';
+import { SUPABASE_CONFIGURADO } from './config.js';
+import {
+  formatearPrecio, formatearFecha, escaparHtml, mostrarToast,
+  abrirDialogo, cerrarDialogo, activarCierreDeDialogos,
+  mostrarAvisoConfiguracion, mensajeDeError
+} from './util.js';
 
-	const API_BASE = '';
-	const ADMIN_TOKEN_KEY = 'ecommerce_lab_admin_token';
-	const toastEl = document.getElementById('adminToast');
-	const toast = toastEl ? new bootstrap.Toast(toastEl, { delay: 2200 }) : null;
+const ESTADOS = ['pendiente', 'pagada', 'enviada', 'entregada', 'cancelada', 'reembolsada'];
+// Cada filtro de la pantalla equivale a uno o varios estados reales
+const FILTROS_ESTADO = {
+  pendiente: ['pendiente'],
+  procesando: ['pagada', 'enviada'],
+  terminada: ['entregada'],
+  todas: null
+};
 
-	function showToast(msg, isError = false) {
-		if (!toastEl) return;
-		const body = toastEl.querySelector('.toast-body');
-		toastEl.classList.remove('text-bg-primary', 'text-bg-danger');
-		toastEl.classList.add(isError ? 'text-bg-danger' : 'text-bg-primary');
-		if (body) body.textContent = msg;
-		toast?.show();
-	}
+let adminActual = null;      // usuario de Auth con rol admin
+let filtroEstado = 'pendiente';
+let ordenes = [];
+let productos = [];
+let categorias = [];
 
-	function getAdminToken() {
-		return localStorage.getItem(ADMIN_TOKEN_KEY) || '';
-	}
-	function setAdminToken(token) {
-		if (token) localStorage.setItem(ADMIN_TOKEN_KEY, token);
-		renderAdminAuthUI();
-		// Recargar datos cuando se inicia sesión
-		if (token) {
-			loadOrders();
-			loadProducts();
-			loadCategories();
-			loadUsers();
-		}
-	}
-	function clearAdminToken() {
-		localStorage.removeItem(ADMIN_TOKEN_KEY);
-		renderAdminAuthUI();
-		// Limpiar caches
-		productsCache = [];
-		categoriesCache = [];
-	}
-	function renderAdminAuthUI() {
-		const loginBtn = document.getElementById('adminLoginBtn');
-		const logoutBtn = document.getElementById('adminLogoutBtn');
-		if (!loginBtn || !logoutBtn) return;
-		if (getAdminToken()) {
-			loginBtn.classList.add('d-none');
-			logoutBtn.classList.remove('d-none');
-			unlockAdminUI();
-		} else {
-			loginBtn.classList.remove('d-none');
-			logoutBtn.classList.add('d-none');
-			lockAdminUI();
-		}
-	}
+const $ = (id) => document.getElementById(id);
 
-	// Bloquear todas las acciones administrativas cuando no hay sesión
-	function lockAdminUI() {
-		// Deshabilitar formularios
-		const forms = ['productForm', 'bulkProductDiscountForm', 'categoryForm', 'bulkCategoryDiscountForm', 'createUserForm', 'editProductForm'];
-		forms.forEach(id => {
-			const form = document.getElementById(id);
-			if (form) {
-				form.querySelectorAll('input, select, textarea, button[type="submit"]').forEach(el => {
-					el.disabled = true;
-				});
-			}
-		});
+// ---------------------------------------------------------------
+// Acceso
+// ---------------------------------------------------------------
+function mostrarAcceso(mensaje) {
+  $('panelAdmin').classList.add('hidden');
+  $('pantallaAcceso').classList.remove('hidden');
+  $('btnSalirAdmin').classList.add('hidden');
+  if (mensaje) $('mensajeAcceso').textContent = mensaje;
+}
 
-		// Deshabilitar botones de acción
-		const actionButtons = ['refreshOrdersBtn', 'saveEditBtn', 'resetCategoryFormBtn'];
-		actionButtons.forEach(id => {
-			const btn = document.getElementById(id);
-			if (btn) btn.disabled = true;
-		});
+/** Comprueba la sesión actual y muestra el panel solo si el rol es admin. */
+async function verificarAdmin() {
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) {
+    mostrarAcceso();
+    return false;
+  }
+  const { data: perfil } = await db.from('perfiles').select('rol').eq('id', session.user.id).maybeSingle();
+  if (perfil?.rol !== 'admin') {
+    await db.auth.signOut();
+    mostrarAcceso('Esta cuenta no tiene permisos de administrador.');
+    return false;
+  }
+  adminActual = session.user;
+  $('pantallaAcceso').classList.add('hidden');
+  $('panelAdmin').classList.remove('hidden');
+  $('btnSalirAdmin').classList.remove('hidden');
+  return true;
+}
 
-		// Deshabilitar filtros y búsquedas
-		document.querySelectorAll('[data-role="orders-filter"]').forEach(btn => btn.disabled = true);
-		document.querySelectorAll('[data-role="edit-product"], [data-role="delete-product"], [data-role="edit-category"], [data-role="order-status"], [data-role="toggle"]').forEach(btn => {
-			if (btn.tagName === 'BUTTON') btn.disabled = true;
-			if (btn.tagName === 'SELECT') btn.disabled = true;
-		});
-		const searchInputs = ['ordersSearchInput', 'searchProductsInput'];
-		searchInputs.forEach(id => {
-			const input = document.getElementById(id);
-			if (input) input.disabled = true;
-		});
+async function cargarTodo() {
+  await cargarCategorias(); // primero: los productos usan las categorías
+  await Promise.all([cargarOrdenes(), cargarProductos(), cargarUsuarios()]);
+}
 
-		// Limpiar tablas y mostrar mensaje de "requiere login"
-		const tables = {
-			'ordersTableBody': 'Inicia sesión como administrador para ver las órdenes',
-			'productsTableBody': 'Inicia sesión como administrador para ver los productos',
-			'categoriesTableBody': 'Inicia sesión como administrador para ver las categorías',
-			'usersTableBody': 'Inicia sesión como administrador para ver los usuarios'
-		};
-		Object.entries(tables).forEach(([id, msg]) => {
-			const tbody = document.getElementById(id);
-			if (tbody) {
-				tbody.innerHTML = `<tr><td colspan="10" class="text-center text-secondary py-4"><i class="bi bi-lock me-2"></i>${msg}</td></tr>`;
-			}
-		});
-	}
+// ---------------------------------------------------------------
+// Órdenes
+// ---------------------------------------------------------------
+async function cargarOrdenes() {
+  const tbody = $('tbodyOrdenes');
+  tbody.innerHTML = '<tr><td colspan="6" class="text-tinta/60">Cargando…</td></tr>';
+  let consulta = db
+    .from('ordenes')
+    .select('id, estado, total, realizada_en, perfiles(nombre, apellido, correo), items_orden(sku, nombre_producto, precio_unitario, cantidad, total_renglon)')
+    .order('realizada_en', { ascending: false })
+    .limit(300);
+  const estados = FILTROS_ESTADO[filtroEstado];
+  if (estados) consulta = consulta.in('estado', estados);
+  const { data, error } = await consulta;
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-arcilla">${escaparHtml(mensajeDeError(error))}</td></tr>`;
+    return;
+  }
+  ordenes = data ?? [];
+  pintarOrdenes();
+}
 
-	// Desbloquear todas las acciones administrativas cuando hay sesión
-	function unlockAdminUI() {
-		// Habilitar formularios
-		const forms = ['productForm', 'bulkProductDiscountForm', 'categoryForm', 'bulkCategoryDiscountForm', 'createUserForm', 'editProductForm'];
-		forms.forEach(id => {
-			const form = document.getElementById(id);
-			if (form) {
-				form.querySelectorAll('input, select, textarea, button[type="submit"]').forEach(el => {
-					el.disabled = false;
-				});
-			}
-		});
+function pintarOrdenes() {
+  const tbody = $('tbodyOrdenes');
+  const q = $('busquedaOrdenes').value.trim().toLowerCase();
+  const lista = q
+    ? ordenes.filter((o) =>
+        [o.perfiles?.nombre, o.perfiles?.apellido, o.perfiles?.correo].filter(Boolean).join(' ').toLowerCase().includes(q))
+    : ordenes;
 
-		// Habilitar botones de acción
-		const actionButtons = ['refreshOrdersBtn', 'saveEditBtn', 'resetCategoryFormBtn'];
-		actionButtons.forEach(id => {
-			const btn = document.getElementById(id);
-			if (btn) btn.disabled = false;
-		});
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-tinta/60">No hay órdenes.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista
+    .map((o) => {
+      const cliente = [o.perfiles?.nombre, o.perfiles?.apellido].filter(Boolean).join(' ') || '(sin nombre)';
+      const items = (o.items_orden ?? [])
+        .map((it) => `<li class="flex justify-between gap-4"><span>${it.cantidad} × ${escaparHtml(it.nombre_producto)} <span class="text-tinta/50">(${escaparHtml(it.sku)})</span></span><span>${formatearPrecio(it.total_renglon)}</span></li>`)
+        .join('');
+      return `
+        <tr>
+          <td class="font-medium">${o.id}</td>
+          <td>${escaparHtml(cliente)}<div class="text-xs text-tinta/60">${escaparHtml(o.perfiles?.correo || '')}</div></td>
+          <td>
+            <select data-estado-orden="${o.id}" class="campo !mt-0 !w-auto capitalize" aria-label="Estado de la orden ${o.id}">
+              ${ESTADOS.map((e) => `<option value="${e}" ${e === o.estado ? 'selected' : ''}>${e}</option>`).join('')}
+            </select>
+          </td>
+          <td class="whitespace-nowrap">${escaparHtml(formatearFecha(o.realizada_en))}</td>
+          <td class="font-medium">${formatearPrecio(o.total)}</td>
+          <td class="text-right"><button type="button" data-detalle="${o.id}" class="boton-sec !px-3 !py-1" aria-expanded="false">Ver</button></td>
+        </tr>
+        <tr class="hidden" data-fila-detalle="${o.id}"><td colspan="6" class="bg-crema/50"><ul class="space-y-1 text-sm">${items || '<li>Sin ítems</li>'}</ul></td></tr>`;
+    })
+    .join('');
+}
 
-		// Habilitar filtros y búsquedas
-		document.querySelectorAll('[data-role="orders-filter"]').forEach(btn => btn.disabled = false);
-		document.querySelectorAll('[data-role="edit-product"], [data-role="delete-product"], [data-role="edit-category"], [data-role="order-status"], [data-role="toggle"]').forEach(btn => {
-			if (btn.tagName === 'BUTTON') btn.disabled = false;
-			if (btn.tagName === 'SELECT') btn.disabled = false;
-		});
-		const searchInputs = ['ordersSearchInput', 'searchProductsInput'];
-		searchInputs.forEach(id => {
-			const input = document.getElementById(id);
-			if (input) input.disabled = false;
-		});
-	}
+async function cambiarEstadoOrden(id, estado) {
+  const { error } = await db.from('ordenes').update({ estado }).eq('id', id);
+  if (error) throw error;
+  mostrarToast(`Orden #${id} → ${estado}`);
+  await cargarOrdenes();
+}
 
-	function formatCurrencyCOP(v) {
-		try {
-			return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v);
-		} catch {
-			return `$${v}`;
-		}
-	}
+function pintarFiltrosEstado() {
+  $('filtrosEstado').querySelectorAll('[data-estado]').forEach((b) => {
+    const activo = b.dataset.estado === filtroEstado;
+    b.className = `pildora ${activo ? 'border-tinta bg-tinta text-papel' : 'border-tinta/30 hover:border-tinta'}`;
+  });
+}
 
-	// ---- Productos (listado y edición) ----
-	let productsCache = [];
-	let categoriesCache = [];
+// ---------------------------------------------------------------
+// Categorías
+// ---------------------------------------------------------------
+async function cargarCategorias() {
+  const { data, error } = await db.from('categorias').select('*').order('nombre');
+  if (error) {
+    $('tbodyCategorias').innerHTML = `<tr><td colspan="5" class="text-arcilla">${escaparHtml(mensajeDeError(error))}</td></tr>`;
+    return;
+  }
+  categorias = data ?? [];
+  pintarCategorias();
+  $('selCategoria').innerHTML =
+    '<option value="">(Sin categoría)</option>' +
+    categorias.map((c) => `<option value="${c.id}">${escaparHtml(c.nombre)}</option>`).join('');
+}
 
-	async function loadProducts() {
-		const tbody = document.getElementById('productsTableBody');
-		if (!tbody) return;
-		if (!getAdminToken()) {
-			tbody.innerHTML = `<tr><td colspan="7" class="text-center text-secondary py-4"><i class="bi bi-lock me-2"></i>Inicia sesión como administrador para ver los productos</td></tr>`;
-			return;
-		}
-		tbody.innerHTML = `<tr><td colspan="7" class="text-secondary">Cargando...</td></tr>`;
-		try {
-			const res = await fetch(`${API_BASE}/api/productos?all=1`);
-			const data = await res.json();
-			if (!Array.isArray(data)) throw new Error('Respuesta inválida');
-			productsCache = data;
-			renderProductsTable(data);
-		} catch {
-			tbody.innerHTML = `<tr><td colspan="7" class="text-danger">No fue posible cargar los productos.</td></tr>`;
-		}
-	}
+function pintarCategorias() {
+  $('tbodyCategorias').innerHTML = categorias.length
+    ? categorias
+        .map(
+          (c) => `
+        <tr>
+          <td class="font-medium">${escaparHtml(c.nombre)}</td>
+          <td class="text-tinta/60">${escaparHtml(c.slug)}</td>
+          <td>${c.activo ? 'Sí' : 'No'}</td>
+          <td>${c.descuento_activo ? `${Number(c.descuento_pct ?? 0)}%` : '—'}</td>
+          <td class="text-right"><button type="button" data-editar-categoria="${c.id}" class="boton-sec !px-3 !py-1">Editar</button></td>
+        </tr>`
+        )
+        .join('')
+    : '<tr><td colspan="5" class="text-tinta/60">Sin categorías.</td></tr>';
+}
 
-	function renderProductsTable(list) {
-		const tbody = document.getElementById('productsTableBody');
-		if (!tbody) return;
-		tbody.innerHTML = '';
-		if (!list.length) {
-			tbody.innerHTML = `<tr><td colspan="7" class="text-secondary">Sin productos.</td></tr>`;
-			return;
-		}
-		for (const p of list) {
-			const tr = document.createElement('tr');
-			tr.innerHTML = `
-				<td>${p.id}</td>
-				<td>${escapeHtml(p.sku)}</td>
-				<td>${escapeHtml(p.nombre)}</td>
-				<td class="text-end">${formatCurrencyCOP(p.precio)}</td>
-				<td class="text-end">${p.existencias}</td>
-				<td>${p.activo ? '<span class="badge text-bg-success">Sí</span>' : '<span class="badge text-bg-secondary">No</span>'}</td>
-				<td class="text-end">
-					<button class="btn btn-sm btn-outline-primary me-1" data-role="edit-product" data-id="${p.id}">
-						<i class="bi bi-pencil"></i>
-					</button>
-					<button class="btn btn-sm btn-outline-danger" data-role="delete-product" data-id="${p.id}">
-						<i class="bi bi-trash"></i>
-					</button>
-				</td>
-			`;
-			tbody.appendChild(tr);
-		}
-	}
+function limpiarFormCategoria() {
+  const f = $('formCategoria');
+  f.reset();
+  f.id.value = '';
+  $('tituloFormCategoria').textContent = 'Nueva categoría';
+}
 
-	function escapeHtml(str) {
-		return String(str || '')
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;')
-			.replace(/'/g, '&#039;');
-	}
+function editarCategoria(id) {
+  const c = categorias.find((x) => x.id === id);
+  if (!c) return;
+  const f = $('formCategoria');
+  f.id.value = c.id;
+  f.nombre.value = c.nombre;
+  f.slug.value = c.slug;
+  f.descripcion.value = c.descripcion ?? '';
+  f.activo.value = c.activo ? '1' : '0';
+  f.descuento_pct.value = c.descuento_pct ?? '';
+  f.descuento_activo.value = c.descuento_activo ? '1' : '0';
+  $('tituloFormCategoria').textContent = `Editar: ${c.nombre}`;
+}
 
-	document.getElementById('searchProductsInput')?.addEventListener('input', (ev) => {
-		const q = (ev.target.value || '').toLowerCase().trim();
-		const filtered = !q
-			? productsCache
-			: productsCache.filter((p) => [p.nombre, p.sku].filter(Boolean).join(' ').toLowerCase().includes(q));
-		renderProductsTable(filtered);
-	});
+/** Convierte el valor de un campo numérico vacío en null. */
+function numeroOnull(valor) {
+  return valor === '' || valor === null || valor === undefined ? null : Number(valor);
+}
 
-	// ---- Descuento masivo de productos ----
-	document.getElementById('bulkProductDiscountForm')?.addEventListener('submit', async (e) => {
-		e.preventDefault();
-		if (!getAdminToken()) {
-			showToast('Inicia sesión como admin para aplicar descuentos', true);
-			document.getElementById('adminLoginBtn')?.click();
-			return;
-		}
-		const form = e.currentTarget;
-		const fd = new FormData(form);
-		const activar = Number(fd.get('activar') || 0);
-		const porcentajeRaw = fd.get('porcentaje');
-		const porcentaje = porcentajeRaw === null || porcentajeRaw === '' ? null : Number(porcentajeRaw);
-		try {
-			const res = await fetch(`${API_BASE}/api/productos/descuento-masivo`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAdminToken()}` },
-				body: JSON.stringify({ activar, porcentaje })
-			});
-			const data = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(data?.message || 'No fue posible aplicar el descuento masivo');
-			showToast('Descuento masivo aplicado a productos');
-			loadProducts();
-		} catch (err) {
-			showToast(err.message || 'Error aplicando descuento masivo', true);
-		}
-	});
+async function guardarCategoria(f) {
+  const id = f.id.value ? Number(f.id.value) : null;
+  const datos = {
+    nombre: f.nombre.value.trim(),
+    slug: f.slug.value.trim(),
+    descripcion: f.descripcion.value.trim() || null,
+    activo: f.activo.value === '1',
+    descuento_pct: numeroOnull(f.descuento_pct.value),
+    descuento_activo: f.descuento_activo.value === '1'
+  };
+  const { error } = id
+    ? await db.from('categorias').update(datos).eq('id', id)
+    : await db.from('categorias').insert(datos);
+  if (error) throw error;
+  mostrarToast(id ? 'Categoría actualizada' : 'Categoría creada');
+  limpiarFormCategoria();
+  await cargarCategorias();
+}
 
-	// ---- Categorías (CRUD y descuentos) ----
-	async function loadCategories() {
-		const tbody = document.getElementById('categoriesTableBody');
-		if (!tbody) return;
-		if (!getAdminToken()) {
-			tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4"><i class="bi bi-lock me-2"></i>Inicia sesión como administrador para ver las categorías</td></tr>`;
-			return;
-		}
-		tbody.innerHTML = `<tr><td colspan="6" class="text-secondary">Cargando...</td></tr>`;
-		try {
-			const res = await fetch(`${API_BASE}/api/categorias`);
-			const data = await res.json();
-			if (!Array.isArray(data)) throw new Error('Respuesta inválida');
-			categoriesCache = data;
-			renderCategoriesTable(data);
-			populateCategorySelects();
-		} catch {
-			tbody.innerHTML = `<tr><td colspan="6" class="text-danger">No fue posible cargar las categorías.</td></tr>`;
-		}
-	}
+/** Aplica o quita un descuento a TODAS las filas de una tabla. */
+async function descuentoMasivo(tabla, f) {
+  const activar = f.activar.value === '1';
+  const pct = numeroOnull(f.porcentaje.value);
+  if (activar && (pct === null || pct < 0 || pct > 100)) {
+    throw new Error('Escribe un porcentaje entre 0 y 100.');
+  }
+  if (!window.confirm(`¿${activar ? `Aplicar ${pct}% de descuento` : 'Quitar el descuento'} a TODOS los registros de ${tabla}?`)) return;
+  // PostgREST exige un filtro en los UPDATE; "id >= 0" abarca todas las filas
+  const { error } = await db
+    .from(tabla)
+    .update({ descuento_pct: activar ? pct : null, descuento_activo: activar })
+    .gte('id', 0);
+  if (error) throw error;
+  mostrarToast('Descuento masivo aplicado');
+}
 
-	function renderCategoriesTable(list) {
-		const tbody = document.getElementById('categoriesTableBody');
-		if (!tbody) return;
-		tbody.innerHTML = '';
-		if (!list.length) {
-			tbody.innerHTML = `<tr><td colspan="6" class="text-secondary">Sin categorías.</td></tr>`;
-			return;
-		}
-		for (const c of list) {
-			const tr = document.createElement('tr');
-			tr.innerHTML = `
-				<td>${c.id}</td>
-				<td>${escapeHtml(c.nombre)}</td>
-				<td>${escapeHtml(c.slug)}</td>
-				<td>${c.activo ? '<span class="badge text-bg-success">Sí</span>' : '<span class="badge text-bg-secondary">No</span>'}</td>
-				<td>${c.descuento_activo ? (c.descuento_pct ?? 0) : '-'}</td>
-				<td class="text-end">
-					<button class="btn btn-sm btn-outline-primary" data-role="edit-category" data-id="${c.id}">
-						<i class="bi bi-pencil"></i>
-					</button>
-				</td>
-			`;
-			tbody.appendChild(tr);
-		}
-	}
+// ---------------------------------------------------------------
+// Productos
+// ---------------------------------------------------------------
+async function cargarProductos() {
+  const tbody = $('tbodyProductos');
+  tbody.innerHTML = '<tr><td colspan="6" class="text-tinta/60">Cargando…</td></tr>';
+  const { data, error } = await db.from('productos').select('*').order('nombre');
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-arcilla">${escaparHtml(mensajeDeError(error))}</td></tr>`;
+    return;
+  }
+  productos = data ?? [];
+  pintarProductos();
+}
 
-	function populateCategorySelects() {
-		const options = ['<option value="">(Sin categoría)</option>']
-			.concat(categoriesCache.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`))
-			.join('');
-		const createSel = document.getElementById('createCategoriaSelect');
-		const editSel = document.getElementById('editCategoriaSelect');
-		if (createSel) createSel.innerHTML = options;
-		if (editSel) editSel.innerHTML = options;
-	}
+function pintarProductos() {
+  const q = $('busquedaProductos').value.trim().toLowerCase();
+  const lista = q ? productos.filter((p) => `${p.nombre} ${p.sku}`.toLowerCase().includes(q)) : productos;
+  $('tbodyProductos').innerHTML = lista.length
+    ? lista
+        .map(
+          (p) => `
+        <tr>
+          <td class="text-tinta/60">${escaparHtml(p.sku)}</td>
+          <td class="font-medium">${escaparHtml(p.nombre)}</td>
+          <td class="text-right">${formatearPrecio(p.precio)}${p.descuento_activo ? `<div class="text-xs text-arcilla">-${Number(p.descuento_pct ?? 0)}%</div>` : ''}</td>
+          <td class="text-right ${p.existencias <= 3 ? 'font-bold text-arcilla' : ''}">${p.existencias}</td>
+          <td>${p.activo ? 'Sí' : '<span class="text-tinta/50">No</span>'}</td>
+          <td class="whitespace-nowrap text-right">
+            <button type="button" data-editar-producto="${p.id}" class="boton-sec !px-3 !py-1">Editar</button>
+            ${p.activo ? `<button type="button" data-desactivar="${p.id}" class="ml-1 text-sm text-tinta/60 underline-offset-4 hover:text-arcilla hover:underline">Desactivar</button>` : ''}
+          </td>
+        </tr>`
+        )
+        .join('')
+    : '<tr><td colspan="6" class="text-tinta/60">Sin productos.</td></tr>';
+}
 
-	// Editar categoría (cargar en formulario derecha)
-	document.addEventListener('click', (ev) => {
-		const btn = ev.target.closest('button[data-role="edit-category"]');
-		if (!btn) return;
-		const id = Number(btn.getAttribute('data-id'));
-		const c = categoriesCache.find(x => x.id === id);
-		const form = document.getElementById('categoryForm');
-		if (!c || !form) return;
-		form.id.value = c.id;
-		form.nombre.value = c.nombre || '';
-		form.slug.value = c.slug || '';
-		form.descripcion.value = c.descripcion || '';
-		form.activo.value = c.activo ? '1' : '0';
-		form.descuento_pct.value = c.descuento_pct ?? '';
-		form.descuento_activo.value = c.descuento_activo ? '1' : '0';
-	});
+function abrirFormProducto(producto) {
+  const f = $('formProducto');
+  f.reset();
+  $('tituloProducto').textContent = producto ? 'Editar producto' : 'Nuevo producto';
+  f.id.value = producto?.id ?? '';
+  if (producto) {
+    f.sku.value = producto.sku;
+    f.nombre.value = producto.nombre;
+    f.descripcion.value = producto.descripcion ?? '';
+    f.categoria_id.value = producto.categoria_id ?? '';
+    f.precio.value = producto.precio;
+    f.existencias.value = producto.existencias;
+    f.activo.value = producto.activo ? '1' : '0';
+    f.descuento_pct.value = producto.descuento_pct ?? '';
+    f.descuento_activo.value = producto.descuento_activo ? '1' : '0';
+    f.imagen_url.value = producto.imagen_url ?? '';
+  }
+  abrirDialogo('dlgProducto');
+}
 
-	// Guardar categoría (crear/actualizar)
-	document.getElementById('categoryForm')?.addEventListener('submit', async (e) => {
-		e.preventDefault();
-		if (!getAdminToken()) {
-			showToast('Inicia sesión como admin para guardar categorías', true);
-			document.getElementById('adminLoginBtn')?.click();
-			return;
-		}
-		const form = e.currentTarget;
-		const fd = new FormData(form);
-		const payload = Object.fromEntries(fd.entries());
-		const id = payload.id ? Number(payload.id) : null;
-		payload.activo = Number(payload.activo || 1);
-		payload.descuento_pct = payload.descuento_pct === '' ? null : Number(payload.descuento_pct);
-		payload.descuento_activo = Number(payload.descuento_activo || 0);
-		try {
-			const url = id ? `${API_BASE}/api/categorias/${id}` : `${API_BASE}/api/categorias`;
-			const method = id ? 'PUT' : 'POST';
-			const res = await fetch(url, {
-				method,
-				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAdminToken()}` },
-				body: JSON.stringify(payload)
-			});
-			const data = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(data?.message || 'No fue posible guardar la categoría');
-			showToast(`Categoría ${id ? 'actualizada' : 'creada'}`);
-			if (!id) form.reset();
-			loadCategories();
-		} catch (err) {
-			showToast(err.message || 'Error guardando categoría', true);
-		}
-	});
+async function guardarProducto(f) {
+  const id = f.id.value ? Number(f.id.value) : null;
+  const datos = {
+    sku: f.sku.value.trim(),
+    nombre: f.nombre.value.trim(),
+    descripcion: f.descripcion.value.trim() || null,
+    categoria_id: f.categoria_id.value ? Number(f.categoria_id.value) : null,
+    precio: Number(f.precio.value),
+    existencias: Number(f.existencias.value),
+    activo: f.activo.value === '1',
+    descuento_pct: numeroOnull(f.descuento_pct.value),
+    descuento_activo: f.descuento_activo.value === '1',
+    imagen_url: f.imagen_url.value.trim() || null
+  };
+  const { error } = id
+    ? await db.from('productos').update(datos).eq('id', id)
+    : await db.from('productos').insert(datos);
+  if (error) throw error;
+  mostrarToast(id ? 'Producto actualizado' : 'Producto creado');
+  cerrarDialogo('dlgProducto');
+  await cargarProductos();
+}
 
-	document.getElementById('resetCategoryFormBtn')?.addEventListener('click', () => {
-		const form = document.getElementById('categoryForm');
-		form?.reset();
-		form?.querySelector('input[name="id"]')?.setAttribute('value', '');
-	});
+async function desactivarProducto(id) {
+  if (!window.confirm('¿Desactivar este producto? Dejará de verse en la tienda.')) return;
+  const { error } = await db.from('productos').update({ activo: false }).eq('id', id);
+  if (error) throw error;
+  mostrarToast('Producto desactivado');
+  await cargarProductos();
+}
 
-	// Descuento masivo categorías
-	document.getElementById('bulkCategoryDiscountForm')?.addEventListener('submit', async (e) => {
-		e.preventDefault();
-		if (!getAdminToken()) {
-			showToast('Inicia sesión como admin para aplicar descuentos a categorías', true);
-			document.getElementById('adminLoginBtn')?.click();
-			return;
-		}
-		const fd = new FormData(e.currentTarget);
-		const activar = Number(fd.get('activar') || 0);
-		const porcentajeRaw = fd.get('porcentaje');
-		const porcentaje = porcentajeRaw === null || porcentajeRaw === '' ? null : Number(porcentajeRaw);
-		try {
-			const res = await fetch(`${API_BASE}/api/categorias/descuento-masivo`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAdminToken()}` },
-				body: JSON.stringify({ activar, porcentaje })
-			});
-			const data = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(data?.message || 'No fue posible aplicar el descuento masivo a categorías');
-			showToast('Descuento masivo aplicado a categorías');
-			loadCategories();
-		} catch (err) {
-			showToast(err.message || 'Error aplicando descuento masivo a categorías', true);
-		}
-	});
+// ---------------------------------------------------------------
+// Usuarios
+// ---------------------------------------------------------------
+async function cargarUsuarios() {
+  const tbody = $('tbodyUsuarios');
+  const { data, error } = await db
+    .from('perfiles')
+    .select('id, nombre, apellido, correo, rol, creado_en')
+    .order('creado_en', { ascending: false })
+    .limit(200);
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-arcilla">${escaparHtml(mensajeDeError(error))}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data
+    .map((u) => {
+      const esYo = u.id === adminActual?.id;
+      const nuevoRol = u.rol === 'admin' ? 'cliente' : 'admin';
+      return `
+        <tr>
+          <td class="font-medium">${escaparHtml([u.nombre, u.apellido].filter(Boolean).join(' ') || '(sin nombre)')}</td>
+          <td>${escaparHtml(u.correo || '')}</td>
+          <td class="whitespace-nowrap">${escaparHtml(formatearFecha(u.creado_en))}</td>
+          <td>
+            <span class="mr-2 capitalize">${escaparHtml(u.rol)}</span>
+            ${esYo ? '<span class="text-xs text-tinta/50">(tú)</span>'
+                   : `<button type="button" data-rol="${nuevoRol}" data-usuario="${escaparHtml(u.id)}" class="text-sm underline underline-offset-4 hover:text-arcilla">Hacer ${nuevoRol}</button>`}
+          </td>
+        </tr>`;
+    })
+    .join('');
+}
 
-	// Abrir editor
-	document.addEventListener('click', async (ev) => {
-		const btn = ev.target.closest('button[data-role="edit-product"]');
-		if (!btn) return;
-		const id = Number(btn.getAttribute('data-id'));
-		try {
-			const res = await fetch(`${API_BASE}/api/productos/${id}`);
-			const p = await res.json();
-			if (!res.ok) throw new Error(p?.message || 'No se pudo cargar el producto');
-			const modalEl = document.getElementById('editProductModal');
-			const form = document.getElementById('editProductForm');
-			if (!modalEl || !form) return;
-			form.id.value = p.id;
-			form.sku.value = p.sku || '';
-			form.nombre.value = p.nombre || '';
-			form.descripcion.value = p.descripcion || '';
-			form.precio.value = p.precio ?? 0;
-			form.existencias.value = p.existencias ?? 0;
-			form.moneda.value = p.moneda || 'COP';
-			form.activo.value = p.activo ? '1' : '0';
-			form.imagen_url.value = p.imagen_url || '';
-			// Campos de categoría y descuento (prefill con valores reales)
-			if (form.categoria_id) form.categoria_id.value = p.categoria_id || '';
-			if (form.descuento_pct) form.descuento_pct.value = (p.producto_descuento_pct === null || p.producto_descuento_pct === undefined) ? '' : Number(p.producto_descuento_pct);
-			if (form.descuento_activo) form.descuento_activo.value = p.producto_descuento_activo ? '1' : '0';
-			const modal = new bootstrap.Modal(modalEl);
-			modal.show();
-		} catch (err) {
-			showToast(err.message || 'No se pudo abrir el editor', true);
-		}
-	});
+async function cambiarRol(usuarioId, rol) {
+  if (!window.confirm(`¿Cambiar el rol de este usuario a "${rol}"?`)) return;
+  const { error } = await db.rpc('cambiar_rol', { p_usuario: usuarioId, p_rol: rol });
+  if (error) throw error;
+  mostrarToast('Rol actualizado');
+  await cargarUsuarios();
+}
 
-	// Guardar edición
-	document.getElementById('saveEditBtn')?.addEventListener('click', async () => {
-		const form = document.getElementById('editProductForm');
-		const id = Number(form.id.value);
-		const payload = {
-			sku: form.sku.value,
-			nombre: form.nombre.value,
-			descripcion: form.descripcion.value,
-			precio: Number(form.precio.value),
-			moneda: form.moneda.value || 'COP',
-			existencias: Number(form.existencias.value),
-			activo: Number(form.activo.value),
-			imagen_url: form.imagen_url.value || undefined,
-			categoria_id: form.categoria_id?.value ? Number(form.categoria_id.value) : null,
-			descuento_pct: form.descuento_pct?.value === '' ? null : Number(form.descuento_pct.value),
-			descuento_activo: Number(form.descuento_activo?.value || 0)
-		};
-		try {
-			if (!getAdminToken()) {
-				showToast('Inicia sesión como admin para guardar', true);
-				document.getElementById('adminLoginBtn')?.click();
-				return;
-			}
-			const res = await fetch(`${API_BASE}/api/productos/${id}`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAdminToken()}` },
-				body: JSON.stringify(payload)
-			});
-			const data = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(data?.message || 'No fue posible actualizar');
-			showToast('Producto actualizado');
-			loadProducts();
-			document.querySelector('#editProductModal .btn-close')?.click();
-		} catch (err) {
-			showToast(err.message || 'Error actualizando', true);
-		}
-	});
+// ---------------------------------------------------------------
+// Eventos
+// ---------------------------------------------------------------
+/** Ejecuta una acción y muestra cualquier error como aviso (sin romper la página). */
+async function seguro(accion) {
+  try {
+    await accion();
+  } catch (err) {
+    mostrarToast(mensajeDeError(err), true);
+  }
+}
 
-	// Eliminar (borrado lógico)
-	document.addEventListener('click', async (ev) => {
-		const btn = ev.target.closest('button[data-role="delete-product"]');
-		if (!btn) return;
-		if (!getAdminToken()) {
-			showToast('Inicia sesión como admin para eliminar', true);
-			document.getElementById('adminLoginBtn')?.click();
-			return;
-		}
-		const id = Number(btn.getAttribute('data-id'));
-		if (!confirm('¿Deseas desactivar este producto?')) return;
-		try {
-			const res = await fetch(`${API_BASE}/api/productos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${getAdminToken()}` } });
-			if (!res.ok && res.status !== 204) {
-				const data = await res.json().catch(() => ({}));
-				throw new Error(data?.message || 'No fue posible eliminar');
-			}
-			showToast('Producto desactivado');
-			loadProducts();
-		} catch (err) {
-			showToast(err.message || 'Error eliminando', true);
-		}
-	});
+function activarPestanas() {
+  const barra = document.querySelector('[data-tabs="admin"]');
+  const seleccionar = (nombre) => {
+    barra.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === nombre)));
+    document.querySelectorAll('[data-grupo="admin"]').forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== nombre));
+  };
+  barra.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-tab]');
+    if (b) seleccionar(b.dataset.tab);
+  });
+  seleccionar('ordenes');
+}
 
-	// ---- Órdenes ----
-	let ordersStatusFilter = 'pendiente'; // por defecto pendientes
+function conectarEventos() {
+  // Acceso
+  $('formAcceso').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const f = ev.currentTarget;
+    seguro(async () => {
+      const { error } = await db.auth.signInWithPassword({ email: f.correo.value.trim().toLowerCase(), password: f.password.value });
+      if (error) throw error;
+      f.reset();
+      if (await verificarAdmin()) await cargarTodo();
+    });
+  });
+  $('btnSalirAdmin').addEventListener('click', () =>
+    seguro(async () => {
+      await db.auth.signOut();
+      adminActual = null;
+      mostrarAcceso('Sesión cerrada.');
+    })
+  );
 
-	async function loadOrders() {
-		const tbody = document.getElementById('ordersTableBody');
-		if (!tbody) return;
-		if (!getAdminToken()) {
-			tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4"><i class="bi bi-lock me-2"></i>Inicia sesión como administrador para ver las órdenes</td></tr>`;
-			return;
-		}
-		tbody.innerHTML = `<tr><td colspan="6" class="text-secondary">Cargando...</td></tr>`;
-		try {
-			const estadoParam = (() => {
-				if (ordersStatusFilter === 'pendiente') return 'pendiente';
-				if (ordersStatusFilter === 'procesando') return 'pagada,enviada';
-				if (ordersStatusFilter === 'terminada') return 'entregada';
-				return '';
-			})();
-			const q = (document.getElementById('ordersSearchInput')?.value || '').trim();
-			const url = `${API_BASE}/api/ordenes?detalles=1${estadoParam ? `&estado=${encodeURIComponent(estadoParam)}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}`;
-			const res = await fetch(url, { headers: { 'Authorization': `Bearer ${getAdminToken()}` } });
-			const data = await res.json();
-			if (!Array.isArray(data)) throw new Error('Respuesta inválida');
-			if (data.length === 0) {
-				tbody.innerHTML = `<tr><td colspan="6" class="text-secondary">No hay órdenes.</td></tr>`;
-				return;
-			}
-			tbody.innerHTML = '';
-			for (const o of data) {
-				const tr = document.createElement('tr');
-				tr.innerHTML = `
-					<td>${o.id}</td>
-					<td>
-						<div>${(o.cliente_nombre || '')} ${(o.cliente_apellido || '')}</div>
-						<div class="small text-secondary">${o.cliente_correo || ''}</div>
-					</td>
-					<td>
-						<select class="form-select form-select-sm" data-role="order-status" data-id="${o.id}">
-							<option value="pendiente" ${o.estado==='pendiente'?'selected':''}>pendiente</option>
-							<option value="pagada" ${o.estado==='pagada'?'selected':''}>pagada</option>
-							<option value="enviada" ${o.estado==='enviada'?'selected':''}>enviada</option>
-							<option value="entregada" ${o.estado==='entregada'?'selected':''}>entregada</option>
-							<option value="cancelada" ${o.estado==='cancelada'?'selected':''}>cancelada</option>
-							<option value="reembolsada" ${o.estado==='reembolsada'?'selected':''}>reembolsada</option>
-						</select>
-					</td>
-					<td>${new Date(o.realizada_en).toLocaleString('es-CO')}</td>
-					<td>${formatCurrencyCOP(o.total_calculado || 0)}</td>
-					<td class="text-end">
-						<button class="btn btn-sm btn-outline-secondary" data-role="toggle" data-id="${o.id}">
-							<i class="bi bi-chevron-down"></i>
-						</button>
-					</td>
-				`;
-				tbody.appendChild(tr);
+  // Órdenes
+  $('filtrosEstado').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-estado]');
+    if (!b) return;
+    filtroEstado = b.dataset.estado;
+    pintarFiltrosEstado();
+    seguro(cargarOrdenes);
+  });
+  $('busquedaOrdenes').addEventListener('input', pintarOrdenes);
+  $('btnRefrescar').addEventListener('click', () => seguro(cargarOrdenes));
+  $('tbodyOrdenes').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-detalle]');
+    if (!b) return;
+    const fila = document.querySelector(`[data-fila-detalle="${b.dataset.detalle}"]`);
+    const oculto = fila.classList.toggle('hidden');
+    b.setAttribute('aria-expanded', String(!oculto));
+    b.textContent = oculto ? 'Ver' : 'Ocultar';
+  });
+  $('tbodyOrdenes').addEventListener('change', (ev) => {
+    const s = ev.target.closest('[data-estado-orden]');
+    if (s) seguro(() => cambiarEstadoOrden(Number(s.dataset.estadoOrden), s.value));
+  });
 
-				const trItems = document.createElement('tr');
-				trItems.className = 'd-none';
-				const itemsHtml = (o.items || [])
-					.map(
-						(it) => `
-						<tr>
-							<td>${it.sku}</td>
-							<td>${it.nombre_producto}</td>
-							<td class="text-end">${it.cantidad}</td>
-							<td class="text-end">${formatCurrencyCOP(it.precio_unitario)}</td>
-							<td class="text-end">${formatCurrencyCOP(it.total_renglon)}</td>
-						</tr>`
-					)
-					.join('');
-				trItems.innerHTML = `
-					<td colspan="6">
-						<div class="card card-body">
-							<h6 class="mb-3">Ítems</h6>
-							<div class="table-responsive">
-								<table class="table table-sm">
-									<thead>
-										<tr>
-											<th>SKU</th>
-											<th>Producto</th>
-											<th class="text-end">Cant.</th>
-											<th class="text-end">Precio</th>
-											<th class="text-end">Total</th>
-										</tr>
-									</thead>
-									<tbody>
-										${itemsHtml || `<tr><td colspan="5" class="text-secondary">Sin ítems</td></tr>`}
-									</tbody>
-								</table>
-							</div>
-						</div>
-					</td>
-				`;
-				tbody.appendChild(trItems);
-			}
-		} catch {
-			tbody.innerHTML = `<tr><td colspan="6" class="text-danger">No fue posible cargar las órdenes.</td></tr>`;
-		}
-	}
+  // Productos
+  $('btnNuevoProducto').addEventListener('click', () => abrirFormProducto(null));
+  $('busquedaProductos').addEventListener('input', pintarProductos);
+  $('tbodyProductos').addEventListener('click', (ev) => {
+    const e = ev.target.closest('[data-editar-producto]');
+    const d = ev.target.closest('[data-desactivar]');
+    if (e) abrirFormProducto(productos.find((p) => p.id === Number(e.dataset.editarProducto)));
+    if (d) seguro(() => desactivarProducto(Number(d.dataset.desactivar)));
+  });
+  $('formProducto').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    seguro(() => guardarProducto(ev.currentTarget));
+  });
+  $('formDescuentoProductos').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    seguro(async () => {
+      await descuentoMasivo('productos', ev.currentTarget);
+      await cargarProductos();
+    });
+  });
 
-	document.addEventListener('click', (ev) => {
-		const btn = ev.target.closest('button[data-role="toggle"]');
-		if (!btn) return;
-		const tr = btn.closest('tr');
-		const detailsTr = tr?.nextElementSibling;
-		if (!detailsTr) return;
-		detailsTr.classList.toggle('d-none');
-		btn.innerHTML = detailsTr.classList.contains('d-none') ? '<i class="bi bi-chevron-down"></i>' : '<i class="bi bi-chevron-up"></i>';
-	});
+  // Categorías
+  $('tbodyCategorias').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-editar-categoria]');
+    if (b) editarCategoria(Number(b.dataset.editarCategoria));
+  });
+  $('formCategoria').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    seguro(() => guardarCategoria(ev.currentTarget));
+  });
+  $('btnNuevaCategoria').addEventListener('click', limpiarFormCategoria);
+  $('formDescuentoCategorias').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    seguro(async () => {
+      await descuentoMasivo('categorias', ev.currentTarget);
+      await cargarCategorias();
+    });
+  });
 
-	document.getElementById('refreshOrdersBtn')?.addEventListener('click', loadOrders);
-	// Buscar por cliente (nombre/correo)
-	document.getElementById('ordersSearchInput')?.addEventListener('input', () => {
-		loadOrders();
-	});
+  // Usuarios
+  $('tbodyUsuarios').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-usuario]');
+    if (b) seguro(() => cambiarRol(b.dataset.usuario, b.dataset.rol));
+  });
+}
 
-	// Filtros de estado (pendiente/ procesando/ terminadas / todas)
-	document.getElementById('ordersStatusFilters')?.addEventListener('click', (e) => {
-		const btn = e.target.closest('button[data-role="orders-filter"]');
-		if (!btn) return;
-		ordersStatusFilter = String(btn.getAttribute('data-val') || 'pendiente');
-		// Activar visual
-		const links = e.currentTarget.querySelectorAll('.nav-link');
-		links.forEach(l => l.classList.remove('active'));
-		btn.classList.add('active');
-		loadOrders();
-	});
+async function iniciar() {
+  mostrarAvisoConfiguracion(SUPABASE_CONFIGURADO);
+  activarCierreDeDialogos();
+  activarPestanas();
+  pintarFiltrosEstado();
+  conectarEventos();
+  if (!SUPABASE_CONFIGURADO) {
+    mostrarAcceso();
+    return;
+  }
+  await seguro(async () => {
+    if (await verificarAdmin()) await cargarTodo();
+  });
+}
 
-	// Cambio de estado por fila
-	document.addEventListener('change', async (e) => {
-		const sel = e.target.closest('select[data-role="order-status"]');
-		if (!sel) return;
-		const id = Number(sel.getAttribute('data-id'));
-		const estado = sel.value;
-		try {
-			if (!getAdminToken()) {
-				showToast('Inicia sesión como admin para cambiar estado', true);
-				document.getElementById('adminLoginBtn')?.click();
-				return;
-			}
-			const res = await fetch(`${API_BASE}/api/ordenes/${id}/estado`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAdminToken()}` },
-				body: JSON.stringify({ estado })
-			});
-			const data = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(data?.message || 'No fue posible cambiar el estado');
-			showToast(`Orden #${id} → ${estado}`);
-			loadOrders();
-		} catch (err) {
-			showToast(err.message || 'Error al cambiar estado', true);
-		}
-	});
-
-	// ---- Crear Producto ----
-	document.getElementById('productForm')?.addEventListener('submit', async (ev) => {
-		ev.preventDefault();
-		const form = ev.currentTarget;
-		const submitBtn = form.querySelector('button[type="submit"]');
-		const formData = new FormData(form);
-		const payload = Object.fromEntries(formData.entries());
-		payload.precio = Number(payload.precio);
-		payload.existencias = Number(payload.existencias || 0);
-		payload.activo = Number(payload.activo || 1);
-		payload.categoria_id = payload.categoria_id ? Number(payload.categoria_id) : null;
-		payload.descuento_pct = payload.descuento_pct === '' ? null : Number(payload.descuento_pct);
-		payload.descuento_activo = Number(payload.descuento_activo || 0);
-		if (!payload.moneda) payload.moneda = 'COP';
-		submitBtn.disabled = true;
-		try {
-			if (!getAdminToken()) {
-				showToast('Inicia sesión como admin para crear', true);
-				document.getElementById('adminLoginBtn')?.click();
-				return;
-			}
-			const res = await fetch(`${API_BASE}/api/productos`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAdminToken()}` },
-				body: JSON.stringify(payload)
-			});
-			const data = await res.json().catch(() => ({}));
-			if (!res.ok) {
-				throw new Error(data?.message || 'No fue posible crear el producto');
-			}
-			form.reset();
-			showToast(`Producto creado #${data.id || ''}`);
-			loadProducts();
-		} catch (err) {
-			showToast(err.message || 'Error al crear producto', true);
-		} finally {
-			submitBtn.disabled = false;
-		}
-	});
-
-	// ---- Usuarios (admin) ----
-	async function loadUsers() {
-		const tbody = document.getElementById('usersTableBody');
-		if (!tbody) return;
-		if (!getAdminToken()) {
-			tbody.innerHTML = `<tr><td colspan="4" class="text-center text-secondary py-4"><i class="bi bi-lock me-2"></i>Inicia sesión como administrador para ver los usuarios</td></tr>`;
-			return;
-		}
-		tbody.innerHTML = `<tr><td colspan="4" class="text-secondary">Cargando...</td></tr>`;
-		try {
-			const res = await fetch(`${API_BASE}/api/admin/users`, {
-				headers: { 'Authorization': `Bearer ${getAdminToken()}` }
-			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data?.message || 'No fue posible cargar usuarios');
-			tbody.innerHTML = '';
-			for (const u of data) {
-				const tr = document.createElement('tr');
-				tr.innerHTML = `
-					<td>${u.id}</td>
-					<td>${escapeHtml([u.nombre, u.apellido].filter(Boolean).join(' '))}</td>
-					<td>${escapeHtml(u.correo)}</td>
-					<td>${escapeHtml(u.rol)}</td>
-				`;
-				tbody.appendChild(tr);
-			}
-		} catch (err) {
-			tbody.innerHTML = `<tr><td colspan="4" class="text-danger">${escapeHtml(err.message || 'Error')}</td></tr>`;
-		}
-	}
-
-	document.getElementById('createUserForm')?.addEventListener('submit', async (e) => {
-		e.preventDefault();
-		const form = e.currentTarget;
-		const fd = new FormData(form);
-		const payload = Object.fromEntries(fd.entries());
-		try {
-			const res = await fetch(`${API_BASE}/api/admin/users`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${getAdminToken()}`
-				},
-				body: JSON.stringify(payload)
-			});
-			const data = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(data?.message || 'No fue posible crear el usuario');
-			showToast(`Usuario creado #${data.id}`);
-			form.reset();
-			loadUsers();
-		} catch (err) {
-			showToast(err.message || 'Error creando usuario', true);
-		}
-	});
-
-	// Login admin
-	document.getElementById('adminLoginForm')?.addEventListener('submit', async (e) => {
-		e.preventDefault();
-		const form = e.currentTarget;
-		const fd = new FormData(form);
-		const payload = Object.fromEntries(fd.entries());
-		try {
-			const res = await fetch(`${API_BASE}/api/auth/login`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data?.message || 'No fue posible iniciar sesión');
-			setAdminToken(data.token);
-			document.querySelector('#adminLoginModal .btn-close')?.click();
-			showToast('Sesión admin iniciada');
-			loadUsers();
-		} catch (err) {
-			showToast(err.message || 'Error al iniciar sesión', true);
-		}
-	});
-
-	document.getElementById('adminLogoutBtn')?.addEventListener('click', () => {
-		clearAdminToken();
-		showToast('Sesión admin cerrada');
-		// Cerrar modales abiertos
-		document.querySelectorAll('.modal.show').forEach(modalEl => {
-			const modal = bootstrap.Modal.getInstance(modalEl);
-			if (modal) modal.hide();
-		});
-	});
-
-	// ---- Init ----
-	document.addEventListener('DOMContentLoaded', () => {
-		renderAdminAuthUI();
-		// Solo cargar datos si hay token
-		if (getAdminToken()) {
-			loadOrders();
-			loadProducts();
-			loadCategories();
-			loadUsers();
-		}
-	});
-})();
-
-
+document.addEventListener('DOMContentLoaded', iniciar);

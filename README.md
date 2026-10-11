@@ -1,306 +1,48 @@
-# Ecommerce Lab (ES) - ModaNova
+# ModaNueva · Tienda online
 
-Aplicación completa de e-commerce con frontend Bootstrap 5 y backend Node.js + MySQL. Sistema de tienda en línea con catálogo de productos, carrito de compras, autenticación de usuarios, gestión de órdenes y panel administrativo.
+Tienda de ropa y accesorios hecha con **HTML + Tailwind CSS + JavaScript** y **Supabase** (base de datos Postgres + autenticación). No tiene servidor propio: el navegador habla directo con Supabase y la seguridad la dan las reglas RLS de la base de datos.
 
-## 🎯 Características
+> Proyecto adaptado a partir de [Cristiancano1236/Ecommerce-node.js](https://github.com/Cristiancano1236/Ecommerce-node.js).
 
-### Frontend
-- ✅ Interfaz moderna con Bootstrap 5.3.3
-- ✅ Catálogo de productos con imágenes
-- ✅ Búsqueda y filtrado por categorías
-- ✅ Carrito de compras (localStorage)
-- ✅ Sistema de autenticación (login/registro)
-- ✅ Perfil de usuario con gestión de compras
-- ✅ Panel administrativo completo
-- ✅ Diseño responsive
-
-### Backend
-- ✅ API REST con Express.js
-- ✅ Autenticación JWT (JSON Web Tokens)
-- ✅ Sistema de roles (cliente/admin)
-- ✅ Gestión de productos (CRUD)
-- ✅ Gestión de categorías
-- ✅ Sistema de órdenes
-- ✅ Gestión de usuarios
-- ✅ Descuentos por producto y categoría
-- ✅ Conexión a MySQL con pool de conexiones
-
-### Seguridad
-- ✅ Contraseñas hasheadas con bcrypt
-- ✅ Middleware de autenticación
-- ✅ Validación de permisos por rol
-- ✅ Protección de rutas administrativas
-
-## 📁 Estructura del Proyecto
+## Estructura
 
 ```
-Ecommerce-Lab/
-├── backend/
-│   ├── db.js                    # Pool de conexiones MySQL
-│   ├── server.js                # Servidor Express principal
-│   ├── middleware/
-│   │   └── auth.js              # Middleware de autenticación JWT
-│   ├── routes/
-│   │   ├── products.js          # Endpoints de productos
-│   │   ├── orders.js            # Endpoints de órdenes
-│   │   ├── auth.js              # Endpoints de autenticación
-│   │   ├── categories.js        # Endpoints de categorías
-│   │   └── admin.js             # Endpoints administrativos
-│   └── package.json             # Dependencias del backend
-├── public/
-│   ├── index.html               # Página principal (catálogo)
-│   ├── admin.html               # Panel administrativo
-│   └── js/
-│       ├── app.js               # Lógica del frontend principal
-│       └── admin.js             # Lógica del panel admin
-├── ecommerce_mysql_es.sql       # Script SQL con esquema y datos
-├── .gitignore                   # Archivos a ignorar en Git
-└── README.md                    # Este archivo
+public/
+  index.html        Tienda (catálogo, carrito, login, perfil)
+  admin.html        Panel de administración
+  js/
+    config.js       URL y anon key de Supabase + nombre/moneda de la tienda
+    supabaseClient.js  Conexión única a Supabase
+    util.js         Formato de precios, escape de HTML, avisos
+    tienda.js       Lógica de la tienda
+    admin.js        Lógica del admin
+supabase/
+  schema.sql        Tablas, vista, funciones, seguridad RLS y datos de ejemplo
 ```
 
-## 🔧 Requisitos
-
-- **Node.js**: 18 o superior
-- **MySQL**: 8.0 o superior
-- **npm**: Incluido con Node.js
-
-## 🚀 Instalación
-
-### 1. Clonar el repositorio
-
-```bash
-git clone https://github.com/Cristiancano1236/Ecommerce-node.js.git
-cd Ecommerce-node.js
-```
-
-### 2. Crear la base de datos
-
-Ejecuta el script SQL en MySQL Workbench o desde la línea de comandos:
-
-```sql
--- Opción 1: Desde MySQL Workbench
-SOURCE ecommerce_mysql_es.sql;
-
--- Opción 2: Desde CLI de MySQL
-mysql -u root -p < ecommerce_mysql_es.sql
-```
-
-Este script creará:
-- La base de datos `ecommerce`
-- Todas las tablas necesarias (productos, categorías, clientes, órdenes, etc.)
-- Datos de ejemplo
-
-### 3. Instalar dependencias
-
-```bash
-cd backend
-npm install
-```
-
-### 4. Configurar variables de entorno
-
-Crea un archivo `.env` en la raíz del proyecto (`Ecommerce-Lab/.env`) con el siguiente contenido:
-
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=tu_contraseña_mysql
-DB_NAME=ecommerce
-PORT=3000
-JWT_SECRET=tu_secreto_jwt_aqui_cambiar_en_produccion
-```
-
-**⚠️ Importante**: Cambia `JWT_SECRET` por una cadena aleatoria segura en producción.
-
-### 5. Iniciar el servidor
-
-```bash
-cd backend
-npm start
-```
-
-Para desarrollo con recarga automática:
-
-```bash
-npm run dev
-```
-
-El servidor estará disponible en `http://localhost:3000`
-
-## 🏗️ Generar Ejecutable
-
-El proyecto puede compilarse en un ejecutable usando `pkg`, lo que permite ejecutar la aplicación sin necesidad de instalar Node.js en el sistema destino.
-
-### 1. Instalar dependencias (si aún no lo has hecho)
-
-```bash
-cd backend
-npm install
-```
-
-### 2. Generar ejecutable
-
-**Para todas las plataformas (Windows, Linux, macOS):**
-```bash
-npm run build
-```
-
-**Para una plataforma específica:**
-```bash
-# Solo Windows
-npm run build:win
-
-# Solo Linux
-npm run build:linux
-
-# Solo macOS
-npm run build:mac
-```
-
-Los ejecutables se generarán en `backend/dist/` con los siguientes nombres:
-- Windows: `ecommerce-lab-backend.exe`
-- Linux: `ecommerce-lab-backend`
-- macOS: `ecommerce-lab-backend`
-
-### 3. Preparar la distribución
-
-Después del build, se copiarán automáticamente los archivos de `public/` a `backend/dist/public/`.
-
-**Estructura de distribución:**
-```
-backend/dist/
-├── ecommerce-lab-backend.exe  (o sin .exe en Linux/Mac)
-├── public/
-│   ├── index.html
-│   ├── admin.html
-│   └── js/
-│       ├── app.js
-│       └── admin.js
-```
-
-### 4. Ejecutar el ejecutable
-
-**En Windows:**
-```bash
-cd backend/dist
-ecommerce-lab-backend.exe
-```
-
-**En Linux/macOS:**
-```bash
-cd backend/dist
-./ecommerce-lab-backend
-```
-
-**⚠️ Importante:**
-- El archivo `.env` debe estar en el mismo directorio que el ejecutable o en la raíz del proyecto.
-- Asegúrate de tener MySQL configurado y accesible desde donde ejecutes el ejecutable.
-- La carpeta `public/` debe estar en el mismo directorio que el ejecutable para servir los archivos estáticos.
-
-## 📚 API Endpoints
-
-### Autenticación (`/api/auth`)
-- `POST /api/auth/register` - Registrar nuevo usuario
-- `POST /api/auth/login` - Iniciar sesión
-- `GET /api/auth/me` - Obtener perfil actual (requiere autenticación)
-- `PUT /api/auth/profile` - Actualizar perfil (requiere autenticación)
-- `PUT /api/auth/password` - Cambiar contraseña (requiere autenticación)
-
-### Productos (`/api/productos`)
-- `GET /api/productos` - Listar productos (filtros: `?categoria_id=X`, `?all=1`)
-- `GET /api/productos/:id` - Obtener producto por ID
-- `POST /api/productos` - Crear producto (requiere admin)
-- `PUT /api/productos/:id` - Actualizar producto (requiere admin)
-- `DELETE /api/productos/:id` - Eliminar producto lógicamente (requiere admin)
-- `POST /api/productos/descuento-masivo` - Aplicar descuento masivo (requiere admin)
-
-### Categorías (`/api/categorias`)
-- `GET /api/categorias` - Listar categorías
-- `POST /api/categorias` - Crear categoría (requiere admin)
-- `PUT /api/categorias/:id` - Actualizar categoría (requiere admin)
-- `DELETE /api/categorias/:id` - Eliminar categoría (requiere admin)
-
-### Órdenes (`/api/ordenes`)
-- `POST /api/ordenes` - Crear orden desde carrito (requiere autenticación)
-- `GET /api/ordenes` - Listar órdenes del usuario (requiere autenticación)
-- `GET /api/ordenes/:id` - Obtener orden por ID (requiere autenticación)
-- `GET /api/ordenes/admin/todas` - Listar todas las órdenes (requiere admin)
-- `PUT /api/ordenes/:id/estado` - Actualizar estado de orden (requiere admin)
-
-### Administración (`/api/admin`)
-- `GET /api/admin/users` - Listar usuarios (requiere admin)
-- `POST /api/admin/users` - Crear usuario (requiere admin)
-
-## 👤 Usuario Administrador por Defecto
-
-El sistema crea automáticamente un usuario administrador al iniciar:
-
-- **Correo**: `admin@modanova.local`
-- **Contraseña**: `admin123`
-
-**⚠️ Importante**: Cambia esta contraseña en producción.
-
-## 🛠️ Tecnologías Utilizadas
-
-### Backend
-- **Express.js** - Framework web para Node.js
-- **MySQL2** - Cliente MySQL para Node.js
-- **bcrypt** - Hashing de contraseñas
-- **jsonwebtoken** - Autenticación JWT
-- **dotenv** - Variables de entorno
-- **cors** - Habilitar CORS
-
-### Frontend
-- **Bootstrap 5.3.3** - Framework CSS
-- **Bootstrap Icons** - Iconografía
-- **JavaScript Vanilla** - Sin frameworks adicionales
-
-### Base de Datos
-- **MySQL 8.0+** - Sistema de gestión de bases de datos relacional
-
-## 📝 Características Adicionales
-
-### Sistema de Descuentos
-- Descuentos a nivel de producto
-- Descuentos a nivel de categoría
-- Prioridad: descuento de producto > descuento de categoría
-- Activación/desactivación de descuentos
-- Aplicación automática en el cálculo de precios
-
-### Gestión de Inventario
-- Control de existencias
-- Validación de stock al crear órdenes
-- Actualización automática de inventario
-
-### Carrito de Compras
-- Persistencia en `localStorage`
-- Sincronización con el servidor al finalizar compra
-- Validación de disponibilidad antes de procesar
-
-## 🔒 Seguridad
-
-- Contraseñas hasheadas con bcrypt (10 salt rounds)
-- Tokens JWT con expiración de 7 días
-- Validación de permisos por rol
-- Protección contra inyección SQL (consultas parametrizadas)
-- Validación de entrada en todos los endpoints
-
-## 📄 Licencia
-
-MIT
-
-## 👨‍💻 Autor
-
-Cristian Cano
-
-## 🤝 Contribuciones
-
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-
+## Puesta en marcha
+
+1. **Base de datos:** Supabase > SQL Editor > pega todo `supabase/schema.sql` > Run.
+2. **Conexión:** pon tu *Project URL* y *anon key* en `public/js/config.js`
+   (Supabase > Project Settings > API). **Nunca** pongas la `service_role key` ahí.
+3. **Probar en local:** `npm run dev` y abre http://localhost:3000
+   (o `python -m http.server 3000` dentro de `public/`).
+4. **Crear tu admin:** regístrate en la tienda y luego, en el SQL Editor:
+   ```sql
+   update public.perfiles set rol = 'admin' where correo = '<tu-correo>';
+   ```
+   Después entra a `/admin.html`.
+
+> Si Supabase pide confirmar el correo al registrarse y no lo quieres en pruebas:
+> Authentication > Providers > Email > desactiva "Confirm email".
+
+## Cómo funciona la seguridad
+
+- Los visitantes solo leen productos y categorías activos.
+- Cada cliente ve únicamente sus propios pedidos y perfil.
+- El **rol** no se puede cambiar desde el navegador (solo con la función `cambiar_rol`, exclusiva de admins).
+- Las compras pasan por la función SQL `crear_orden`, que calcula precios con descuento, valida y descuenta stock en una sola transacción. El navegador no puede fijar precios.
+
+## Publicarla
+
+Es un sitio estático: sube la carpeta `public/` a Netlify, Vercel, Cloudflare Pages o GitHub Pages.

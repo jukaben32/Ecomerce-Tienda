@@ -59,3 +59,7 @@ ecommerce-lab-backend*
 
 # Variables de entorno reales (nunca subir al repo)
 .env
+
+# Nunca subir llaves privadas de Supabase
+.env*
+*.pem

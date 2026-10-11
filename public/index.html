@@ -1,333 +1,266 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-	<!--
-	Propósito: Página de inicio (index) minimalista y moderna de e-commerce.
-	Relación: Consume APIs expuestas por `backend/server.js` y controlada por `public/js/app.js`.
-	-->
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>ModaNova - Tienda de Ropa</title>
-	<!-- Bootstrap CSS (última estable 5.x) -->
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-	<!-- Bootstrap Icons -->
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-	<style>
-		/* Estilos adaptados a tienda de ropa (paleta moderna) */
-		:root {
-			--brand-dark:#0f172a;
-			--brand-accent:#e11d48; /* acento moda (secundario) */
-			--brand-accent-2:#9333ea; /* acento 2 */
-			--brand-blue-1:#2563eb; /* azul primario filtros */
-			--brand-blue-2:#0ea5e9; /* azul degradado filtros */
-			--muted:#64748b;
-		}
-		body { background-color:#f8fafc; color:var(--brand-dark); }
-		.navbar { backdrop-filter:saturate(180%) blur(6px); }
-		.card-img-top { object-fit:cover; height:220px; }
-		.price { font-weight:700; color:var(--brand-dark); }
-		.card { border: 1px solid #eef2f7; transition: transform .15s ease, box-shadow .15s ease; }
-		.card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(2,6,23,.08); }
-		.hero {
-			background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
-			border-bottom: 1px solid #e2e8f0;
-		}
-		.badge-stock { background-color:#ffe4e6; color:#9f1239; border:1px solid #fecdd3; }
-		footer { color:var(--muted); }
-		/* Filtro de categorías: nav-pills elegante y desplazable */
-		#categoryFilters { overflow:auto; white-space:nowrap; }
-		#categoryFilters .nav-link {
-			border-radius: 999px;
-			border: 1px solid #e5e7eb;
-			color: #374151;
-			background: #ffffff;
-		}
-		#categoryFilters .nav-link:hover { background:#f9fafb; }
-		#categoryFilters .nav-link.active {
-			background: linear-gradient(90deg, var(--brand-blue-1) 0%, var(--brand-blue-2) 100%);
-			color:#fff;
-			border-color: transparent;
-		}
-		/* Alto fijo para la fila de descuento y alinear inputs entre tarjetas */
-		.discount-row { min-height: 26px; }
-		/* Hero con fotos superpuestas (ropa) */
-		.hero-figure { position: relative; min-height: 280px; }
-		.hero-photo {
-			border-radius: 1rem;
-			box-shadow: 0 20px 40px rgba(2,6,23,.12);
-			border: 1px solid #eef2f7;
-		}
-		.hero-photo.main { width: 68%; }
-		.hero-photo.secondary {
-			width: 46%;
-			position: absolute;
-			right: 0;
-			bottom: -12px;
-		}
-	</style>
+  <!--
+    index.html · Tienda ModaNueva
+    - Estilos: Tailwind CSS (por CDN, sin instalar nada)
+    - Datos: Supabase (ver js/config.js y supabase/schema.sql)
+    - Lógica: js/tienda.js (catálogo, carrito, sesión, compras)
+  -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ModaNueva · Moda para estrenar</title>
+  <meta name="description" content="ModaNueva: ropa y accesorios para mujer, hombre y niños. Envíos a todo el país.">
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23B5472B%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2722%27 font-family=%27Georgia%27 font-style=%27italic%27 text-anchor=%27middle%27 fill=%27%23F4EFE6%27%3EM%3C/text%3E%3C/svg%3E">
+  <!-- Tipografías: Fraunces (títulos) + DM Sans (texto) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS (CDN) con la paleta de ModaNueva -->
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            papel: '#F4EFE6',   // fondo general
+            crema: '#EAE2D3',   // superficies
+            tinta: '#1C1A17',   // texto y botones
+            arcilla: '#B5472B', // acento (ofertas, enlaces)
+            salvia: '#5F6F52'   // acento secundario (éxito)
+          },
+          fontFamily: {
+            display: ['Fraunces', 'Georgia', 'serif'],
+            sans: ['"DM Sans"', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Grano sutil de papel sobre el fondo */
+    body {
+      background-color: #F4EFE6;
+      background-image: radial-gradient(rgba(28,26,23,.045) 1px, transparent 1px);
+      background-size: 4px 4px;
+    }
+    /* Cinta de texto en movimiento (se detiene si el usuario pide menos movimiento) */
+    @keyframes cinta { to { transform: translateX(-50%); } }
+    .cinta { animation: cinta 28s linear infinite; }
+    @media (prefers-reduced-motion: reduce) { .cinta { animation: none; } }
+    dialog::backdrop { background: rgba(28,26,23,.55); backdrop-filter: blur(2px); }
+  </style>
 </head>
-<body>
-	<!-- Navbar -->
-	<nav class="navbar navbar-expand-lg bg-white sticky-top border-bottom">
-		<div class="container">
-			<a class="navbar-brand fw-bold" href="/">
-				<i class="bi bi-bag-heart me-2" style="color: var(--brand-accent);"></i>ModaNova
-			</a>
-			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
-				<span class="navbar-toggler-icon"></span>
-			</button>
-			<div class="collapse navbar-collapse" id="navbarMain">
-				<ul class="navbar-nav me-auto mb-2 mb-lg-0">
-					<li class="nav-item"><a class="nav-link active" aria-current="page" href="#">Inicio</a></li>
-				</ul>
-				<div class="d-flex align-items-center gap-2">
-					<!-- Botón de autenticación (visible si NO autenticado) -->
-					<button id="navLoginBtn" class="btn btn-outline-secondary d-none" type="button" data-bs-toggle="modal" data-bs-target="#authModal">
-						<i class="bi bi-person"></i> Entrar
-					</button>
-					<!-- Dropdown de usuario (visible si autenticado) -->
-					<div id="navUserDropdown" class="dropdown d-none">
-						<button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-							<i class="bi bi-person-circle me-2"></i><span id="navUserName" class="text-truncate" style="max-width:160px;"></span>
-						</button>
-						<ul class="dropdown-menu dropdown-menu-end">
-							<li><button class="dropdown-item" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasProfile" aria-controls="offcanvasProfile"><i class="bi bi-person-gear me-2"></i>Mi perfil</button></li>
-							<li><hr class="dropdown-divider"></li>
-							<li><button id="navLogoutBtn" class="dropdown-item text-danger" type="button"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</button></li>
-						</ul>
-					</div>
-					<button class="btn btn-outline-primary position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
-						<i class="bi bi-cart3"></i>
-						<span id="cartCountBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
-					</button>
-				</div>
-			</div>
-		</div>
-	</nav>
+<body class="font-sans text-tinta antialiased">
 
-	<!-- Hero -->
-	<section class="hero py-5">
-		<div class="container">
-			<div class="row align-items-center">
-				<div class="col-md-7">
-					<h1 class="display-5 fw-bold">Estrena hoy. Moda para todos los días.</h1>
-					<p class="lead text-secondary">Básicos cómodos, prendas versátiles y tendencias que combinan con tu estilo. Envíos a todo el país y cambios fáciles.</p>
-					<div class="d-flex flex-wrap gap-2 my-2">
-						<span class="badge rounded-pill text-bg-light"><i class="bi bi-truck me-1"></i>Envío rápido</span>
-						<span class="badge rounded-pill text-bg-light"><i class="bi bi-arrow-repeat me-1"></i>Cambios 30 días</span>
-						<span class="badge rounded-pill text-bg-light"><i class="bi bi-shield-check me-1"></i>Pago seguro</span>
-					</div>
-					<a href="#catalogo" class="btn btn-primary btn-lg mt-2"><i class="bi bi-shop me-2"></i>Ver catálogo</a>
-				</div>
-				<div class="col-md-5 d-none d-md-block">
-					<div class="hero-figure">
-						<img class="hero-photo main" src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=720&q=80" alt="Colección mujer">
-						<img class="hero-photo secondary" src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=80" alt="Colección hombre">
-					</div>
-				</div>
-			</div>
-		</div>
-	</section>
+  <!-- ============ Cabecera ============ -->
+  <header class="sticky top-0 z-40 border-b border-tinta/10 bg-papel/90 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+      <a href="/" class="font-display text-2xl font-bold tracking-tight" aria-label="ModaNueva, inicio">
+        Moda<span class="italic text-arcilla">Nueva</span>
+      </a>
+      <div class="flex items-center gap-2">
+        <!-- Visible si NO hay sesión -->
+        <button id="btnEntrar" type="button" class="hidden rounded-full border border-tinta/25 px-4 py-2 text-sm font-medium transition hover:bg-tinta hover:text-papel focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-arcilla">
+          Entrar
+        </button>
+        <!-- Visible si HAY sesión -->
+        <div id="menuUsuario" class="hidden items-center gap-2">
+          <button id="btnPerfil" type="button" class="max-w-[10rem] truncate rounded-full border border-tinta/25 px-4 py-2 text-sm font-medium transition hover:bg-tinta hover:text-papel focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-arcilla">
+            <span id="nombreUsuario">Mi cuenta</span>
+          </button>
+          <a id="enlaceAdmin" href="/admin.html" class="hidden rounded-full bg-salvia px-4 py-2 text-sm font-medium text-white transition hover:brightness-110">Admin</a>
+          <button id="btnSalir" type="button" class="px-2 py-2 text-sm text-tinta/70 underline-offset-4 transition hover:text-arcilla hover:underline">Salir</button>
+        </div>
+        <button id="btnCarrito" type="button" class="relative rounded-full bg-tinta px-4 py-2 text-sm font-medium text-papel transition hover:bg-arcilla focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-arcilla" aria-label="Abrir carrito">
+          Carrito
+          <span id="contadorCarrito" class="ml-1 inline-grid h-5 min-w-5 place-items-center rounded-full bg-papel px-1 text-xs font-bold text-tinta">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
 
-	<!-- Grid de Productos -->
-	<main class="py-5" id="catalogo">
-		<div class="container">
-			<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-				<h2 class="h4 m-0">Productos</h2>
-				<div class="input-group" style="max-width: 700px;">
-					<button id="categoryDropdownBtn" class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-						Categorías
-					</button>
-					<ul id="categoryDropdownMenu" class="dropdown-menu"></ul>
-					<input id="searchInput" type="search" class="form-control" placeholder="Buscar prendas, marcas..." aria-label="Buscar producto">
-					<button class="btn btn-primary" type="button" aria-label="Buscar"><i class="bi bi-search"></i></button>
-				</div>
-			</div>
-			<!-- Filtros de categorías (píldoras) -->
-			<div class="mb-3">
-				<ul id="categoryFilters" class="nav nav-pills gap-2 small">
-					<!-- Rellenado por app.js -->
-				</ul>
-			</div>
-			<div id="productsGrid" class="row g-4">
-				<!-- Productos renderizados por app.js -->
-			</div>
-		</div>
-	</main>
+  <main>
+    <!-- ============ Portada ============ -->
+    <section class="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-12 pt-12 md:grid-cols-12 md:pb-20 md:pt-20">
+      <div class="md:col-span-7">
+        <p class="mb-4 text-sm font-bold uppercase tracking-[0.2em] text-arcilla">Colección nueva · Todo el año</p>
+        <h1 class="font-display text-5xl font-bold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
+          Lo nuevo se<br>estrena <span class="italic text-arcilla">contigo.</span>
+        </h1>
+        <p class="mt-6 max-w-md text-lg text-tinta/75">
+          Básicos que se quedan, piezas que se notan. Ropa y accesorios para toda la familia, con envíos a todo el país.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center gap-4">
+          <a href="#catalogo" class="rounded-full bg-tinta px-7 py-3.5 font-medium text-papel transition hover:-translate-y-0.5 hover:bg-arcilla hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-arcilla">Ver el catálogo</a>
+          <span class="text-sm text-tinta/60">Cambios fáciles · Pago seguro</span>
+        </div>
+      </div>
 
-	<!-- Offcanvas Carrito -->
-	<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasCart" aria-labelledby="offcanvasCartLabel">
-		<div class="offcanvas-header">
-			<h5 class="offcanvas-title" id="offcanvasCartLabel"><i class="bi bi-cart3 me-2"></i>Carrito</h5>
-			<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-		</div>
-		<div class="offcanvas-body d-flex flex-column">
-			<div id="cartItems" class="list-group list-group-flush mb-3">
-				<!-- Ítems del carrito renderizados por app.js -->
-			</div>
-			<div class="mt-auto">
-				<div class="d-flex justify-content-between align-items-center mb-3">
-					<span class="fw-semibold">Total:</span>
-					<span id="cartTotal" class="h5 mb-0">$0</span>
-				</div>
-				<button id="checkoutBtn" class="btn btn-primary w-100"><i class="bi bi-credit-card me-2"></i>Finalizar compra</button>
-			</div>
-		</div>
-	</div>
+      <!-- Composición decorativa hecha solo con CSS -->
+      <div class="relative hidden h-[26rem] md:col-span-5 md:block" aria-hidden="true">
+        <div class="absolute right-0 top-0 h-72 w-56 rotate-3 rounded-t-[7rem] bg-arcilla shadow-xl"></div>
+        <div class="absolute bottom-0 left-4 h-60 w-48 -rotate-6 rounded-[2rem] bg-salvia shadow-xl"></div>
+        <div class="absolute left-20 top-10 grid h-32 w-32 -rotate-12 place-items-center rounded-full bg-crema font-display text-xl font-bold italic shadow-lg">
+          Nueva<br><span class="text-xs font-sans not-italic font-medium">temporada</span>
+        </div>
+      </div>
+    </section>
 
-	<!-- Offcanvas Perfil -->
-	<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasProfile" aria-labelledby="offcanvasProfileLabel">
-		<div class="offcanvas-header">
-			<h5 class="offcanvas-title" id="offcanvasProfileLabel"><i class="bi bi-person-gear me-2"></i>Mi perfil</h5>
-			<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-		</div>
-		<div class="offcanvas-body">
-			<!--
-				Propósito: Panel de perfil del usuario para ver compras y actualizar datos.
-				Relación: Controlado por `public/js/app.js` (render de compras, envío de formularios).
-			-->
-			<ul class="nav nav-tabs" id="profileTabs" role="tablist">
-				<li class="nav-item" role="presentation">
-					<button class="nav-link active" id="tab-compras" data-bs-toggle="tab" data-bs-target="#pane-compras" type="button" role="tab" aria-controls="pane-compras" aria-selected="true">
-						<i class="bi bi-receipt-cutoff me-1"></i>Mis compras
-					</button>
-				</li>
-				<li class="nav-item" role="presentation">
-					<button class="nav-link" id="tab-cuenta" data-bs-toggle="tab" data-bs-target="#pane-cuenta" type="button" role="tab" aria-controls="pane-cuenta" aria-selected="false">
-						<i class="bi bi-person-lines-fill me-1"></i>Mi cuenta
-					</button>
-				</li>
-				<li class="nav-item" role="presentation">
-					<button class="nav-link" id="tab-seguridad" data-bs-toggle="tab" data-bs-target="#pane-seguridad" type="button" role="tab" aria-controls="pane-seguridad" aria-selected="false">
-						<i class="bi bi-shield-lock me-1"></i>Seguridad
-					</button>
-				</li>
-			</ul>
-			<div class="tab-content pt-3">
-				<!-- Mis compras -->
-				<div class="tab-pane fade show active" id="pane-compras" role="tabpanel" aria-labelledby="tab-compras" tabindex="0">
-					<div id="myOrdersContainer" class="vstack gap-3">
-						<!-- Renderizado dinámico por app.js -->
-					</div>
-				</div>
-				<!-- Mi cuenta -->
-				<div class="tab-pane fade" id="pane-cuenta" role="tabpanel" aria-labelledby="tab-cuenta" tabindex="0">
-					<form id="profileForm" class="row g-3">
-						<div class="col-12">
-							<label class="form-label">Nombre</label>
-							<input id="profileNombre" type="text" class="form-control" name="nombre" required>
-						</div>
-						<div class="col-12">
-							<label class="form-label">Teléfono</label>
-							<input id="profileTelefono" type="tel" class="form-control" name="telefono" placeholder="Opcional">
-						</div>
-						<div class="col-12 d-grid">
-							<button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i>Guardar cambios</button>
-						</div>
-					</form>
-				</div>
-				<!-- Seguridad -->
-				<div class="tab-pane fade" id="pane-seguridad" role="tabpanel" aria-labelledby="tab-seguridad" tabindex="0">
-					<form id="passwordForm" class="row g-3">
-						<div class="col-12">
-							<label class="form-label">Contraseña actual</label>
-							<input type="password" class="form-control" name="actual" required>
-						</div>
-						<div class="col-12">
-							<label class="form-label">Nueva contraseña</label>
-							<input type="password" class="form-control" name="nueva" minlength="6" required>
-						</div>
-						<div class="col-12 d-grid">
-							<button class="btn btn-warning" type="submit"><i class="bi bi-key-fill me-1"></i>Cambiar contraseña</button>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-	</div>
+    <!-- Cinta con beneficios -->
+    <div class="overflow-hidden border-y border-tinta/15 bg-tinta py-3 text-papel" aria-hidden="true">
+      <div class="cinta flex w-max gap-10 whitespace-nowrap font-display text-lg italic">
+        <span>Envío rápido</span><span>·</span><span>Cambios por 30 días</span><span>·</span><span>Pago seguro</span><span>·</span><span>Moda para toda la familia</span><span>·</span>
+        <span>Envío rápido</span><span>·</span><span>Cambios por 30 días</span><span>·</span><span>Pago seguro</span><span>·</span><span>Moda para toda la familia</span><span>·</span>
+      </div>
+    </div>
 
-	<!-- Modal Auth (Login / Registro) -->
-	<div class="modal fade" id="authModal" tabindex="-1" aria-hidden="true">
-		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h5 class="modal-title"><i class="bi bi-person-lock me-2"></i>Accede para finalizar la compra</h5>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<div class="modal-body">
-					<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
-						<li class="nav-item" role="presentation">
-							<button class="nav-link active" id="pills-login-tab" data-bs-toggle="pill" data-bs-target="#pills-login" type="button" role="tab" aria-controls="pills-login" aria-selected="true">Iniciar sesión</button>
-						</li>
-						<li class="nav-item" role="presentation">
-							<button class="nav-link" id="pills-register-tab" data-bs-toggle="pill" data-bs-target="#pills-register" type="button" role="tab" aria-controls="pills-register" aria-selected="false">Registrarse</button>
-						</li>
-					</ul>
-					<div class="tab-content" id="pills-tabContent">
-						<div class="tab-pane fade show active" id="pills-login" role="tabpanel" aria-labelledby="pills-login-tab" tabindex="0">
-							<form id="authLoginForm" class="row g-3">
-								<div class="col-12">
-									<label class="form-label">Correo</label>
-									<input type="email" class="form-control" name="correo" required>
-								</div>
-								<div class="col-12">
-									<label class="form-label">Contraseña</label>
-									<input type="password" class="form-control" name="password" required>
-								</div>
-								<div class="col-12 d-grid">
-									<button class="btn btn-primary" type="submit"><i class="bi bi-box-arrow-in-right me-1"></i>Entrar</button>
-								</div>
-							</form>
-						</div>
-						<div class="tab-pane fade" id="pills-register" role="tabpanel" aria-labelledby="pills-register-tab" tabindex="0">
-							<form id="authRegisterForm" class="row g-3">
-								<div class="col-md-6">
-									<label class="form-label">Nombre</label>
-									<input type="text" class="form-control" name="nombre" required>
-								</div>
-								<div class="col-md-6">
-									<label class="form-label">Apellido</label>
-									<input type="text" class="form-control" name="apellido" required>
-								</div>
-								<div class="col-12">
-									<label class="form-label">Correo</label>
-									<input type="email" class="form-control" name="correo" required>
-								</div>
-								<div class="col-12">
-									<label class="form-label">Teléfono (opcional)</label>
-									<input type="tel" class="form-control" name="telefono">
-								</div>
-								<div class="col-12">
-									<label class="form-label">Contraseña</label>
-									<input type="password" class="form-control" name="password" required>
-								</div>
-								<div class="col-12 d-grid">
-									<button class="btn btn-success" type="submit"><i class="bi bi-person-plus me-1"></i>Crear cuenta</button>
-								</div>
-							</form>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+    <!-- ============ Catálogo ============ -->
+    <section id="catalogo" class="mx-auto max-w-6xl px-4 py-14 md:py-20">
+      <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <h2 class="font-display text-4xl font-bold tracking-tight">El catálogo</h2>
+        <label class="relative block w-full sm:w-72">
+          <span class="sr-only">Buscar productos</span>
+          <input id="busqueda" type="search" placeholder="Buscar prendas…" class="w-full rounded-full border border-tinta/25 bg-transparent px-5 py-2.5 text-sm outline-none transition placeholder:text-tinta/40 focus:border-arcilla focus:ring-2 focus:ring-arcilla/25">
+        </label>
+      </div>
 
-	<!-- Footer -->
-	<footer class="py-4 border-top">
-		<div class="container small">
-			<div class="d-flex justify-content-between align-items-center">
-				<span>&copy; <span id="year"></span> Ecommerce Lab</span>
-				<a class="text-decoration-none" href="#" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })">
-					Subir <i class="bi bi-arrow-up"></i>
-				</a>
-			</div>
-		</div>
-	</footer>
+      <!-- Filtros por categoría (los rellena tienda.js) -->
+      <nav id="filtrosCategoria" class="mb-10 flex gap-2 overflow-x-auto pb-2" aria-label="Categorías"></nav>
 
-	<!-- Bootstrap Bundle + App -->
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-	<script src="/js/app.js"></script>
+      <!-- Productos (los rellena tienda.js) -->
+      <div id="gridProductos" class="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4" aria-live="polite">
+        <p class="col-span-full text-tinta/60">Cargando productos…</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-tinta/15">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-8 text-sm text-tinta/60">
+      <span>&copy; <span id="anio"></span> ModaNueva. Todos los derechos reservados.</span>
+      <a href="#" class="underline-offset-4 hover:text-arcilla hover:underline">Volver arriba ↑</a>
+    </div>
+  </footer>
+
+  <!-- ============ Carrito (panel lateral) ============ -->
+  <dialog id="dlgCarrito" class="m-0 ml-auto h-full max-h-none w-full max-w-md bg-papel p-0 text-tinta shadow-2xl">
+    <div class="flex h-full flex-col">
+      <div class="flex items-center justify-between border-b border-tinta/15 px-5 py-4">
+        <h2 class="font-display text-2xl font-bold">Tu carrito</h2>
+        <button type="button" data-cerrar class="rounded-full px-3 py-1 text-sm hover:bg-crema" aria-label="Cerrar carrito">Cerrar ✕</button>
+      </div>
+      <div id="itemsCarrito" class="flex-1 divide-y divide-tinta/10 overflow-y-auto px-5"></div>
+      <div class="border-t border-tinta/15 px-5 py-4">
+        <div class="mb-4 flex items-baseline justify-between">
+          <span class="text-sm uppercase tracking-widest text-tinta/60">Total</span>
+          <span id="totalCarrito" class="font-display text-3xl font-bold">$ 0</span>
+        </div>
+        <button id="btnPagar" type="button" class="w-full rounded-full bg-tinta py-3.5 font-medium text-papel transition hover:bg-arcilla disabled:cursor-not-allowed disabled:opacity-50">Finalizar compra</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ============ Perfil (panel lateral) ============ -->
+  <dialog id="dlgPerfil" class="m-0 ml-auto h-full max-h-none w-full max-w-lg bg-papel p-0 text-tinta shadow-2xl">
+    <div class="flex h-full flex-col">
+      <div class="flex items-center justify-between border-b border-tinta/15 px-5 py-4">
+        <h2 class="font-display text-2xl font-bold">Mi perfil</h2>
+        <button type="button" data-cerrar class="rounded-full px-3 py-1 text-sm hover:bg-crema" aria-label="Cerrar perfil">Cerrar ✕</button>
+      </div>
+
+      <div class="flex gap-1 border-b border-tinta/15 px-5 pt-3" role="tablist" data-tabs="perfil">
+        <button type="button" role="tab" data-tab="compras" class="tab-btn">Mis compras</button>
+        <button type="button" role="tab" data-tab="cuenta" class="tab-btn">Mi cuenta</button>
+        <button type="button" role="tab" data-tab="seguridad" class="tab-btn">Seguridad</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-5 py-5">
+        <div data-panel="compras" data-grupo="perfil">
+          <div id="listaCompras" class="space-y-4"></div>
+        </div>
+
+        <form data-panel="cuenta" data-grupo="perfil" id="formPerfil" class="hidden space-y-4">
+          <label class="block text-sm font-medium">Nombre
+            <input name="nombre" required maxlength="80" class="campo">
+          </label>
+          <label class="block text-sm font-medium">Apellido
+            <input name="apellido" required maxlength="80" class="campo">
+          </label>
+          <label class="block text-sm font-medium">Teléfono
+            <input name="telefono" type="tel" maxlength="30" placeholder="Opcional" class="campo">
+          </label>
+          <button type="submit" class="boton-principal">Guardar cambios</button>
+        </form>
+
+        <form data-panel="seguridad" data-grupo="perfil" id="formClave" class="hidden space-y-4">
+          <label class="block text-sm font-medium">Nueva contraseña
+            <input name="nueva" type="password" minlength="6" required autocomplete="new-password" class="campo">
+          </label>
+          <p class="text-xs text-tinta/60">Mínimo 6 caracteres.</p>
+          <button type="submit" class="boton-principal">Cambiar contraseña</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ============ Entrar / Registrarse (modal) ============ -->
+  <dialog id="dlgAuth" class="m-auto w-[min(92vw,28rem)] rounded-3xl bg-papel p-0 text-tinta shadow-2xl">
+    <div class="px-6 pb-6 pt-5">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="font-display text-2xl font-bold">Accede para comprar</h2>
+        <button type="button" data-cerrar class="rounded-full px-3 py-1 text-sm hover:bg-crema" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="mb-5 flex gap-1 border-b border-tinta/15" role="tablist" data-tabs="auth">
+        <button type="button" role="tab" data-tab="entrar" class="tab-btn">Iniciar sesión</button>
+        <button type="button" role="tab" data-tab="registro" class="tab-btn">Crear cuenta</button>
+      </div>
+
+      <form data-panel="entrar" data-grupo="auth" id="formEntrar" class="space-y-4">
+        <label class="block text-sm font-medium">Correo
+          <input name="correo" type="email" required autocomplete="email" class="campo">
+        </label>
+        <label class="block text-sm font-medium">Contraseña
+          <input name="password" type="password" required autocomplete="current-password" class="campo">
+        </label>
+        <button type="submit" class="boton-principal">Entrar</button>
+      </form>
+
+      <form data-panel="registro" data-grupo="auth" id="formRegistro" class="hidden space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block text-sm font-medium">Nombre
+            <input name="nombre" required maxlength="80" autocomplete="given-name" class="campo">
+          </label>
+          <label class="block text-sm font-medium">Apellido
+            <input name="apellido" required maxlength="80" autocomplete="family-name" class="campo">
+          </label>
+        </div>
+        <label class="block text-sm font-medium">Correo
+          <input name="correo" type="email" required autocomplete="email" class="campo">
+        </label>
+        <label class="block text-sm font-medium">Teléfono (opcional)
+          <input name="telefono" type="tel" maxlength="30" autocomplete="tel" class="campo">
+        </label>
+        <label class="block text-sm font-medium">Contraseña
+          <input name="password" type="password" minlength="6" required autocomplete="new-password" class="campo">
+        </label>
+        <button type="submit" class="boton-principal">Crear cuenta</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Estilos reutilizables (campos, botones y pestañas) -->
+  <style type="text/tailwindcss">
+    @layer components {
+      .campo { @apply mt-1 block w-full rounded-xl border border-tinta/25 bg-white/60 px-4 py-2.5 text-base outline-none transition focus:border-arcilla focus:ring-2 focus:ring-arcilla/25; }
+      .boton-principal { @apply w-full rounded-full bg-tinta py-3 font-medium text-papel transition hover:bg-arcilla disabled:cursor-not-allowed disabled:opacity-50; }
+      .tab-btn { @apply -mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium text-tinta/60 transition hover:text-tinta; }
+      .tab-btn[aria-selected="true"] { @apply border-arcilla text-tinta; }
+    }
+  </style>
+
+  <script type="module" src="/js/tienda.js"></script>
 </body>
 </html>
-
-
