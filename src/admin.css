@@ -6,6 +6,8 @@
 
 @layer base {
   dialog::backdrop { background: rgba(28, 26, 23, .55); }
+  /* Evita que una tabla ancha estire la columna de una grilla en celular (Safari) */
+  .grid > * { min-width: 0; }
 }
 
 @layer components {
