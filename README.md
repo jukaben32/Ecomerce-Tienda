@@ -14,6 +14,9 @@ Tienda de ropa y accesorios hecha con **HTML + Tailwind CSS + JavaScript** y **S
 - Checkout con dirección (libreta de direcciones), medio de pago, notas y envío calculado
 - Horario de domicilios (avisa si el pedido llega fuera de horario)
 - Volantes / promociones en la portada
+- Portada con secciones alimentadas por tus datos reales: **categorías**, **cómo ordenar** (asistente o WhatsApp), **calificaciones de clientes** (solo primer nombre), **medios de pago**, **entregas y horario**, **tu opinión** y pie con redes
+- Botón flotante de **WhatsApp** (aparece al configurar tu número) y formulario de **quejas, reclamos y sugerencias**
+- SEO: datos estructurados (JSON-LD) con tu horario, teléfono y calificación, imagen para compartir, sitemap
 - Perfil: mis compras, direcciones, datos y contraseña
 - Calificación de pedidos entregados
 - **Asistente con IA**: escribe tu pedido o sube la foto de tu lista y llena el carrito (OpenRouter)
@@ -31,6 +34,7 @@ Tienda de ropa y accesorios hecha con **HTML + Tailwind CSS + JavaScript** y **S
 - Productos: crear/editar, descuentos, **importar Excel/CSV** con vista previa
 - Categorías, Clientes y equipo (roles), Calificaciones
 - Promociones, Medios (subir imágenes), Configuración (horario, envío, mínimo, pagos, ticket)
+- **Mensajes**: bandeja de quejas, reclamos y sugerencias de clientes (nuevas / leídas / resueltas)
 - Asistente IA: contexto que usa el chat e incidencias (preguntas que la IA no supo responder)
 - Link de pago de Stripe para cualquier orden pendiente
 
@@ -50,6 +54,7 @@ supabase/
   migrations/004_cancelar_pagos_vencidos.sql  Cancela pagos con tarjeta abandonados y devuelve el stock
   migrations/005_republica_dominicana.sql     Moneda DOP, datáfono y comprobantes de transferencia
   migrations/006_clientes_sin_cuenta_y_precios.sql  Clientes sin cuenta e historial de precios (deshacer)
+  migrations/007_secciones_publicas.sql  Calificaciones públicas sin datos personales, mensajes de clientes, redes y cobertura
   functions/chat/               Edge Function: asistente con IA (OpenRouter)
   functions/crear-pago/         Edge Function: crea la sesión de pago de Stripe
   functions/stripe-webhook/     Edge Function: confirma el pago (verifica la firma de Stripe)
@@ -66,6 +71,7 @@ supabase/
    4. `supabase/migrations/004_cancelar_pagos_vencidos.sql`
    5. `supabase/migrations/005_republica_dominicana.sql`  (pone moneda DOP y hora de Santo Domingo)
    6. `supabase/migrations/006_clientes_sin_cuenta_y_precios.sql`
+   7. `supabase/migrations/007_secciones_publicas.sql`
 2. **Conexión:** pon tu *Project URL* y *anon key* en `public/js/config.js`
    (Supabase > Project Settings > API). **Nunca** pongas la `service_role key` ahí.
 3. **Probar en local:** `npm install` y luego `npm run dev` (compila el CSS y abre http://localhost:3000).
@@ -152,6 +158,18 @@ también pueda enviarlo por ahí.
 ## Importar productos (Excel / CSV)
 
 Descarga la plantilla desde Productos > "Descargar plantilla". Columnas obligatorias: `sku`, `nombre`, `precio`. Opcionales: `descripcion`, `existencias`, `categoria` (nombre o slug), `activo`, `imagen_url`. Si el SKU ya existe se actualiza.
+
+## Privacidad de las calificaciones y mensajes
+
+- La tabla `calificaciones` es privada. La portada usa la función `resumen_calificaciones()`, que solo devuelve estrellas, comentario
+  y el **primer nombre** del cliente (nunca apellido, correo ni teléfono).
+- Los mensajes de clientes (`sugerencias`) solo se crean con `enviar_sugerencia()`: exige sesión y limita a 5 por usuario cada 24 h.
+  Solo los administradores pueden leerlos.
+
+## Si cambias de dominio
+
+Además de lo indicado arriba, actualiza las URLs absolutas de `public/index.html` (canonical, `og:url`, `og:image`, JSON-LD),
+`public/sitemap.xml` y `public/robots.txt`.
 
 ## Notas
 
