@@ -9,7 +9,7 @@
 }
 
 @layer components {
-  .campo { @apply mt-1 block w-full rounded-xl border border-tinta/25 bg-white/70 px-3 py-2 text-sm outline-none transition focus:border-arcilla focus:ring-2 focus:ring-arcilla/25; }
+  .campo { @apply mt-1 block w-full rounded-xl border border-tinta/25 bg-white/70 px-3 py-2 text-base outline-none md:text-sm transition focus:border-arcilla focus:ring-2 focus:ring-arcilla/25; }
   .boton-principal { @apply rounded-full bg-tinta px-5 py-2.5 text-sm font-medium text-papel transition hover:bg-arcilla disabled:cursor-not-allowed disabled:opacity-50; }
   .boton-sec { @apply rounded-full border border-tinta/30 px-4 py-2 text-sm font-medium transition hover:bg-tinta hover:text-papel; }
   .tab-btn { @apply -mb-px border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tinta/60 transition hover:text-tinta; }
