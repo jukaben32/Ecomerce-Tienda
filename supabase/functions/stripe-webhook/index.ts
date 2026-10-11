@@ -71,9 +71,13 @@ Deno.serve(async (req: Request) => {
     payment_status?: string;
     amount_total?: number;
     currency?: string;
-    metadata?: { orden_id?: string };
+    metadata?: { orden_id?: string; tienda?: string };
     client_reference_id?: string;
   };
+  // La cuenta de Stripe puede ser compartida con otros proyectos: solo atendemos lo nuestro.
+  // Respondemos 200 para que Stripe no reintente eventos ajenos.
+  if (sesion.metadata?.tienda !== 'modanueva') return respuesta({ recibido: true, ignorado: 'no es de ModaNueva' });
+
   if (sesion.payment_status !== 'paid') return respuesta({ recibido: true, nota: 'aún sin pagar' });
 
   const ordenId = Number(sesion.metadata?.orden_id ?? sesion.client_reference_id);

@@ -82,7 +82,10 @@ Deno.serve(async (req: Request) => {
     success_url: `${origen}/?pago=exito&orden=${orden.id}`,
     cancel_url: `${origen}/?pago=cancelado&orden=${orden.id}`,
     client_reference_id: String(orden.id),
+    // Marca propia: la cuenta de Stripe puede compartirse con otros proyectos
+    'metadata[tienda]': 'modanueva',
     'metadata[orden_id]': String(orden.id),
+    'payment_intent_data[metadata][tienda]': 'modanueva',
     'payment_intent_data[metadata][orden_id]': String(orden.id),
     'line_items[0][quantity]': '1',
     'line_items[0][price_data][currency]': 'cop',

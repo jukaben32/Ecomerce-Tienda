@@ -40,6 +40,7 @@ supabase/
   schema.sql                    Tablas base, vista, seguridad RLS y datos de ejemplo
   migrations/002_nivel_pro.sql  Direcciones, configuración, calificaciones, promociones, reportes, storage
   migrations/003_chat_y_pagos.sql  Límite de uso del chat y columnas de pago con Stripe
+  migrations/004_cancelar_pagos_vencidos.sql  Cancela pagos con tarjeta abandonados y devuelve el stock
   functions/chat/               Edge Function: asistente con IA (OpenRouter)
   functions/crear-pago/         Edge Function: crea la sesión de pago de Stripe
   functions/stripe-webhook/     Edge Function: confirma el pago (verifica la firma de Stripe)
@@ -51,6 +52,7 @@ supabase/
    1. `supabase/schema.sql`
    2. `supabase/migrations/002_nivel_pro.sql`
    3. `supabase/migrations/003_chat_y_pagos.sql`
+   4. `supabase/migrations/004_cancelar_pagos_vencidos.sql`
 2. **Conexión:** pon tu *Project URL* y *anon key* en `public/js/config.js`
    (Supabase > Project Settings > API). **Nunca** pongas la `service_role key` ahí.
 3. **Probar en local:** `npm run dev` y abre http://localhost:3000
@@ -95,6 +97,11 @@ Despliegue (con la CLI de Supabase): `supabase functions deploy chat` · `supaba
 
 **Activar la tarjeta:** cuando Stripe esté configurado, en el admin > Configuración marca «Tarjeta».
 Hasta entonces los clientes solo ven efectivo y transferencia.
+
+**Cuenta de Stripe compartida con otros proyectos:** cada pago de ModaNueva lleva la marca `tienda=modanueva` y el webhook
+ignora todo lo que no la tenga, así que no se mezcla con los pagos de tus otros proyectos (y viceversa).
+
+**Pagos abandonados:** un pedido con tarjeta sin pagar tras 26 horas se cancela solo y devuelve el stock (tarea `pg_cron`, migración 004).
 
 **Seguridad del chat:** exige sesión iniciada, limita 40 mensajes por usuario y hora, y la IA nunca crea pedidos:
 solo llena el carrito (el cliente confirma dirección y pago en el checkout).
