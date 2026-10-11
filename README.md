@@ -23,7 +23,9 @@ Tienda de ropa y accesorios hecha con **HTML + Tailwind CSS + JavaScript** y **S
 **Panel admin (`/admin.html`)**
 - Resumen de ventas (por día, medio de pago, más vendidos, calificación)
 - Órdenes: filtros, cambio de estado (devuelve stock al cancelar), detalle y ticket imprimible
-- Nuevo pedido a nombre de un cliente
+- Nuevo pedido a nombre de un cliente **con o sin cuenta** (pedidos por teléfono / WhatsApp)
+- **Pedido desde WhatsApp con IA**: pega el mensaje del cliente (o una captura) y la IA rellena productos, dirección, teléfono y medio de pago; reconoce al cliente por su teléfono. Tú revisas y confirmas
+- **Precios con IA**: escribe «sube 10% los pantalones» o «15% de descuento en accesorios»; ves una vista previa, eliges qué aplicar y puedes **deshacer** (historial de cambios)
 - Productos: crear/editar, descuentos, **importar Excel/CSV** con vista previa
 - Categorías, Clientes y equipo (roles), Calificaciones
 - Promociones, Medios (subir imágenes), Configuración (horario, envío, mínimo, pagos, ticket)
@@ -45,9 +47,12 @@ supabase/
   migrations/003_chat_y_pagos.sql  Límite de uso del chat y columnas de pago con Stripe
   migrations/004_cancelar_pagos_vencidos.sql  Cancela pagos con tarjeta abandonados y devuelve el stock
   migrations/005_republica_dominicana.sql     Moneda DOP, datáfono y comprobantes de transferencia
+  migrations/006_clientes_sin_cuenta_y_precios.sql  Clientes sin cuenta e historial de precios (deshacer)
   functions/chat/               Edge Function: asistente con IA (OpenRouter)
   functions/crear-pago/         Edge Function: crea la sesión de pago de Stripe
   functions/stripe-webhook/     Edge Function: confirma el pago (verifica la firma de Stripe)
+  functions/interpretar-pedido/ Edge Function (solo admin): lee un mensaje de WhatsApp y propone el pedido
+  functions/ajustar-precios/    Edge Function (solo admin): convierte una instrucción en una vista previa de precios
 ```
 
 ## Puesta en marcha
@@ -58,6 +63,7 @@ supabase/
    3. `supabase/migrations/003_chat_y_pagos.sql`
    4. `supabase/migrations/004_cancelar_pagos_vencidos.sql`
    5. `supabase/migrations/005_republica_dominicana.sql`  (pone moneda DOP y hora de Santo Domingo)
+   6. `supabase/migrations/006_clientes_sin_cuenta_y_precios.sql`
 2. **Conexión:** pon tu *Project URL* y *anon key* en `public/js/config.js`
    (Supabase > Project Settings > API). **Nunca** pongas la `service_role key` ahí.
 3. **Probar en local:** `npm run dev` y abre http://localhost:3000
@@ -93,6 +99,7 @@ Las llaves **nunca** van en el código ni en el navegador: se guardan como *secr
 | `SITE_URLS` | Dominios de tu tienda separados por coma (a dónde vuelve Stripe tras pagar). Ej: `http://localhost:3000,https://mitienda.com` |
 
 Despliegue (con la CLI de Supabase): `supabase functions deploy chat` · `supabase functions deploy crear-pago` ·
+`supabase functions deploy interpretar-pedido` · `supabase functions deploy ajustar-precios` ·
 `supabase functions deploy stripe-webhook --no-verify-jwt`
 
 **Webhook de Stripe:** Developers > Webhooks > Add endpoint
@@ -110,6 +117,19 @@ ignora todo lo que no la tenga, así que no se mezcla con los pagos de tus otros
 
 **Seguridad del chat:** exige sesión iniciada, limita 40 mensajes por usuario y hora, y la IA nunca crea pedidos:
 solo llena el carrito (el cliente confirma dirección y pago en el checkout).
+
+## Pedidos por WhatsApp y precios con IA (solo administradores)
+
+**Nuevo pedido > «Pedido desde WhatsApp (IA)»**: pega lo que escribió el cliente («dame 2 blusas y una gorra, mi cel 809…,
+mándalo a Calle Duarte 15») o sube una captura. La IA busca los productos en tu catálogo, rellena el formulario y te marca
+lo que debes confirmar (talla, productos que no existen…). Si el teléfono ya es de un cliente, lo selecciona solo; si es nuevo,
+un botón lo registra como **cliente sin cuenta**. Nada se crea hasta que pulsas «Crear pedido».
+
+**Precios IA**: la IA solo interpreta tu instrucción como una regla (qué productos, qué operación, qué valor). Las cuentas y el
+redondeo los hace el servidor, ves una vista previa con antes/después y eliges qué filas aplicar. Cada cambio queda en el
+historial y se puede **deshacer** (si editaste un producto a mano después, el deshacer no lo pisa).
+
+Ambas funciones exigen rol admin, tienen límite de uso por hora y nunca modifican datos por sí solas.
 
 ## Pagos: transferencia y contra entrega
 
@@ -130,11 +150,10 @@ también pueda enviarlo por ahí.
 
 Descarga la plantilla desde Productos > "Descargar plantilla". Columnas obligatorias: `sku`, `nombre`, `precio`. Opcionales: `descripcion`, `existencias`, `categoria` (nombre o slug), `activo`, `imagen_url`. Si el SKU ya existe se actualiza.
 
-## Pendiente
+## Notas
 
-- Actualizar precios con IA (por ejemplo, subir un % por categoría con lenguaje natural)
-- Pedidos de clientes sin cuenta (teléfono / WhatsApp)
-- Moneda y país: `supabase/schema.sql` trae valores de ejemplo en COP; la migración 005 los convierte a RD$.
+- `supabase/schema.sql` trae valores de ejemplo en COP; la migración 005 los convierte a RD$.
+- Posibles mejoras futuras: notificar pedidos nuevos por WhatsApp, factura con comprobante fiscal (e-CF / NCF).
 
 ## Publicarla
 

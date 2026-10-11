@@ -34,7 +34,7 @@ export async function cargar() {
     .from('ordenes')
     .select(`id, estado, total, subtotal, costo_envio, metodo_pago, canal, direccion_entrega, telefono_contacto, notas, comprobante_path, comprobante_subido_en,
              fuera_de_horario, realizada_en,
-             perfiles(nombre, apellido, correo),
+             perfiles(nombre, apellido, correo), clientes_manuales(nombre, telefono),
              items_orden(sku, nombre_producto, precio_unitario, cantidad, total_renglon)`)
     .order('realizada_en', { ascending: false })
     .limit(300);
@@ -50,7 +50,7 @@ function pintar() {
   const tbody = $('tbodyOrdenes');
   const q = $('busquedaOrdenes').value.trim().toLowerCase();
   const lista = q
-    ? ordenes.filter((o) => [o.perfiles?.nombre, o.perfiles?.apellido, o.perfiles?.correo].filter(Boolean).join(' ').toLowerCase().includes(q))
+    ? ordenes.filter((o) => [o.perfiles?.nombre, o.perfiles?.apellido, o.perfiles?.correo, o.clientes_manuales?.nombre, o.clientes_manuales?.telefono].filter(Boolean).join(' ').toLowerCase().includes(q))
     : ordenes;
 
   if (!lista.length) {
@@ -59,7 +59,9 @@ function pintar() {
   }
   tbody.innerHTML = lista
     .map((o) => {
-      const cliente = [o.perfiles?.nombre, o.perfiles?.apellido].filter(Boolean).join(' ') || '(sin nombre)';
+      const sinCuenta = Boolean(o.clientes_manuales);
+      const cliente = sinCuenta ? o.clientes_manuales.nombre : [o.perfiles?.nombre, o.perfiles?.apellido].filter(Boolean).join(' ') || '(sin nombre)';
+      const contacto = sinCuenta ? (o.clientes_manuales.telefono || '') : (o.perfiles?.correo || '');
       const cerrada = CERRADOS.includes(o.estado);
       const items = (o.items_orden ?? [])
         .map((it) => `<li class="flex justify-between gap-4"><span>${it.cantidad} × ${escaparHtml(it.nombre_producto)} <span class="text-tinta/50">(${escaparHtml(it.sku)})</span></span><span>${formatearPrecio(it.total_renglon)}</span></li>`)
@@ -67,7 +69,7 @@ function pintar() {
       return `
         <tr>
           <td class="font-medium">${o.id}${o.canal !== 'web' ? `<div class="text-[10px] uppercase text-tinta/50">${escaparHtml(o.canal)}</div>` : ''}</td>
-          <td>${escaparHtml(cliente)}<div class="text-xs text-tinta/60">${escaparHtml(o.perfiles?.correo || '')}</div></td>
+          <td>${escaparHtml(cliente)}${sinCuenta ? ' <span class="rounded-full bg-crema px-2 py-0.5 text-[10px] font-bold uppercase text-tinta/60">sin cuenta</span>' : ''}<div class="text-xs text-tinta/60">${escaparHtml(contacto)}</div></td>
           <td>
             <select data-estado-orden="${o.id}" ${cerrada ? 'disabled' : ''} class="campo !mt-0 !w-auto capitalize" aria-label="Estado de la orden ${o.id}">
               ${ESTADOS.map((e) => `<option value="${e}" ${e === o.estado ? 'selected' : ''}>${e}</option>`).join('')}
@@ -149,7 +151,7 @@ async function imprimirTicket(id) {
   const o = ordenes.find((x) => x.id === id);
   if (!o) return;
   const cfg = await cargarConfiguracion();
-  const cliente = [o.perfiles?.nombre, o.perfiles?.apellido].filter(Boolean).join(' ');
+  const cliente = o.clientes_manuales ? o.clientes_manuales.nombre : [o.perfiles?.nombre, o.perfiles?.apellido].filter(Boolean).join(' ');
   const filas = (o.items_orden ?? [])
     .map((it) => `<tr><td>${it.cantidad} × ${escaparHtml(it.nombre_producto)}</td><td style="text-align:right">${formatearPrecio(it.total_renglon)}</td></tr>`)
     .join('');

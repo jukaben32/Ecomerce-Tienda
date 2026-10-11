@@ -4,10 +4,9 @@
 // devuelve "acciones" que aquí se aplican al carrito. La IA nunca crea pedidos.
 import { invocarFuncion } from './api.js';
 import { escaparHtml, mostrarToast, abrirDialogo } from './util.js';
+import { prepararImagen } from './imagen.js';
 
 const MAX_HISTORIAL = 12;       // turnos que se reenvían a la IA
-const MAX_LADO_IMAGEN = 1280;   // px: reducimos la foto antes de enviarla
-const MAX_CARACTERES_IMAGEN = 1_800_000;
 
 let historial = [];             // [{ rol, texto }] (sin imágenes, para ahorrar datos)
 let imagenAdjunta = null;       // data URL pendiente de enviar
@@ -38,40 +37,6 @@ function agregarBurbuja({ rol, texto, imagen, extra = '' }) {
   lista.appendChild(div);
   lista.scrollTop = lista.scrollHeight;
   return div;
-}
-
-/** Reduce y comprime la foto (JPEG) para que viaje rápido y barato. */
-function prepararImagen(archivo) {
-  return new Promise((resolver, rechazar) => {
-    if (!/^image\/(jpeg|png|webp)$/.test(archivo.type)) {
-      rechazar(new Error('Usa una imagen JPG, PNG o WebP.'));
-      return;
-    }
-    const url = URL.createObjectURL(archivo);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const escala = Math.min(1, MAX_LADO_IMAGEN / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.width * escala);
-      canvas.height = Math.round(img.height * escala);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      // Bajamos la calidad hasta que quepa en el límite
-      for (const calidad of [0.85, 0.7, 0.55, 0.4]) {
-        const dataUrl = canvas.toDataURL('image/jpeg', calidad);
-        if (dataUrl.length <= MAX_CARACTERES_IMAGEN) {
-          resolver(dataUrl);
-          return;
-        }
-      }
-      rechazar(new Error('La imagen es demasiado grande.'));
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      rechazar(new Error('No se pudo leer la imagen.'));
-    };
-    img.src = url;
-  });
 }
 
 function pintarAdjunto() {

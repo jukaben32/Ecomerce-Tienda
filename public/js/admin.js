@@ -14,6 +14,7 @@ import * as dashboard from './admin/dashboard.js';
 import * as ordenes from './admin/ordenes.js';
 import * as pedidoManual from './admin/pedidoManual.js';
 import * as productos from './admin/productos.js';
+import * as precios from './admin/precios.js';
 import * as categorias from './admin/categorias.js';
 import * as clientes from './admin/clientes.js';
 import * as calificaciones from './admin/calificaciones.js';
@@ -24,11 +25,11 @@ import * as ajustes from './admin/ajustes.js';
 
 // nombre de pestaña -> módulo (cada módulo exporta montar() y cargar())
 const PESTANAS = {
-  dashboard, ordenes, pedido: pedidoManual, productos, categorias,
+  dashboard, ordenes, pedido: pedidoManual, productos, precios, categorias,
   clientes, calificaciones, promociones, medios, ia, ajustes
 };
 const TITULOS = {
-  dashboard: 'Resumen', ordenes: 'Órdenes', pedido: 'Nuevo pedido', productos: 'Productos',
+  dashboard: 'Resumen', ordenes: 'Órdenes', pedido: 'Nuevo pedido', productos: 'Productos', precios: 'Precios IA',
   categorias: 'Categorías', clientes: 'Clientes', calificaciones: 'Calificaciones',
   promociones: 'Promociones', medios: 'Medios', ia: 'Asistente IA', ajustes: 'Configuración'
 };
