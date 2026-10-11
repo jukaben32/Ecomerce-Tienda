@@ -3,7 +3,7 @@
 <head>
   <!--
     index.html · Tienda ModaNueva
-    - Estilos: Tailwind CSS (por CDN, sin instalar nada)
+    - Estilos: Tailwind CSS compilado (npm run build -> css/tienda.css)
     - Datos: Supabase (ver js/config.js y supabase/schema.sql)
     - Lógica: js/tienda.js (catálogo, carrito, sesión, compras)
   -->
@@ -11,41 +11,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ModaNueva · Moda para estrenar</title>
   <meta name="description" content="ModaNueva: ropa y accesorios para mujer, hombre y niños. Envíos a todo el país.">
+  <meta name="theme-color" content="#F4EFE6">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_DO">
+  <meta property="og:site_name" content="ModaNueva">
+  <meta property="og:title" content="ModaNueva · Moda para estrenar">
+  <meta property="og:description" content="Ropa y accesorios para toda la familia. Paga por transferencia, contra entrega o con tarjeta.">
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23B5472B%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2722%27 font-family=%27Georgia%27 font-style=%27italic%27 text-anchor=%27middle%27 fill=%27%23F4EFE6%27%3EM%3C/text%3E%3C/svg%3E">
   <!-- Tipografías: Newsreader (títulos) + DM Sans (texto) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,700;1,6..72,500&display=swap" rel="stylesheet">
-
-  <!-- Tailwind CSS (CDN) con la paleta de ModaNueva -->
-  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            papel: '#F4EFE6',   // fondo general
-            crema: '#EAE2D3',   // superficies
-            tinta: '#1C1A17',   // texto y botones
-            arcilla: '#B5472B', // acento (ofertas, enlaces)
-            salvia: '#5F6F52'   // acento secundario (éxito)
-          },
-          fontFamily: {
-            display: ['Newsreader', 'Georgia', 'serif'],
-            sans: ['"DM Sans"', 'system-ui', 'sans-serif']
-          }
-        }
-      }
-    };
-  </script>
-  <style>
-    /* Fondo liso de papel */
-    body {
-      background-color: #F4EFE6;
-    }
-    dialog::backdrop { background: rgba(28,26,23,.55); backdrop-filter: blur(2px); }
-  </style>
+  <!-- Estilos compilados con Tailwind (npm run build) -->
+  <link rel="stylesheet" href="/css/tienda.css">
 </head>
 <body class="font-sans text-tinta antialiased">
 
@@ -245,9 +224,9 @@
 
         <form data-panel="seguridad" data-grupo="perfil" id="formClave" class="hidden space-y-4">
           <label class="block text-sm font-medium">Nueva contraseña
-            <input name="nueva" type="password" minlength="6" required autocomplete="new-password" class="campo">
+            <input name="nueva" type="password" minlength="8" required autocomplete="new-password" class="campo">
           </label>
-          <p class="text-xs text-tinta/60">Mínimo 6 caracteres.</p>
+          <p class="text-xs text-tinta/60">Mínimo 8 caracteres.</p>
           <button type="submit" class="boton-principal">Cambiar contraseña</button>
         </form>
       </div>
@@ -293,7 +272,7 @@
           <input name="telefono" type="tel" maxlength="30" autocomplete="tel" class="campo">
         </label>
         <label class="block text-sm font-medium">Contraseña
-          <input name="password" type="password" minlength="6" required autocomplete="new-password" class="campo">
+          <input name="password" type="password" minlength="8" required autocomplete="new-password" class="campo">
         </label>
         <button type="submit" class="boton-principal">Crear cuenta</button>
       </form>
@@ -343,16 +322,6 @@
       </div>
     </form>
   </dialog>
-
-  <!-- Estilos reutilizables (campos, botones y pestañas) -->
-  <style type="text/tailwindcss">
-    @layer components {
-      .campo { @apply mt-1 block w-full rounded-xl border border-tinta/25 bg-white/60 px-4 py-2.5 text-base outline-none transition focus:border-arcilla focus:ring-2 focus:ring-arcilla/25; }
-      .boton-principal { @apply w-full rounded-full bg-tinta py-3 font-medium text-papel transition hover:bg-arcilla disabled:cursor-not-allowed disabled:opacity-50; }
-      .tab-btn { @apply -mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium text-tinta/60 transition hover:text-tinta; }
-      .tab-btn[aria-selected="true"] { @apply border-arcilla text-tinta; }
-    }
-  </style>
 
   <script type="module" src="/js/tienda.js"></script>
 </body>

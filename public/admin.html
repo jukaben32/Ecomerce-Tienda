@@ -16,33 +16,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,700;1,6..72,500&display=swap" rel="stylesheet">
-
-  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: { papel: '#F4EFE6', crema: '#EAE2D3', tinta: '#1C1A17', arcilla: '#B5472B', salvia: '#5F6F52' },
-          fontFamily: { display: ['Newsreader', 'Georgia', 'serif'], sans: ['"DM Sans"', 'system-ui', 'sans-serif'] }
-        }
-      }
-    };
-  </script>
-  <style>dialog::backdrop { background: rgba(28,26,23,.55); }</style>
-  <style type="text/tailwindcss">
-    @layer components {
-      .campo { @apply mt-1 block w-full rounded-xl border border-tinta/25 bg-white/70 px-3 py-2 text-sm outline-none transition focus:border-arcilla focus:ring-2 focus:ring-arcilla/25; }
-      .boton-principal { @apply rounded-full bg-tinta px-5 py-2.5 text-sm font-medium text-papel transition hover:bg-arcilla disabled:cursor-not-allowed disabled:opacity-50; }
-      .boton-sec { @apply rounded-full border border-tinta/30 px-4 py-2 text-sm font-medium transition hover:bg-tinta hover:text-papel; }
-      .tab-btn { @apply -mb-px border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tinta/60 transition hover:text-tinta; }
-      .tab-btn[aria-selected="true"] { @apply border-arcilla text-tinta; }
-      .tabla th { @apply px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-tinta/60; }
-      .tabla th.text-right { text-align: right; }
-      .tabla td { @apply px-3 py-3 align-middle text-sm; }
-      .tabla tbody tr { @apply border-t border-tinta/10; }
-      .pildora { @apply rounded-full border px-3 py-1 text-xs font-medium transition; }
-    }
-  </style>
+  <!-- Estilos compilados con Tailwind (npm run build) -->
+  <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body class="bg-papel font-sans text-tinta antialiased">
 

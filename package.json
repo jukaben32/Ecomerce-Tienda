@@ -4,7 +4,12 @@
   "private": true,
   "description": "Tienda online ModaNueva: HTML + Tailwind CSS + JavaScript sobre Supabase",
   "scripts": {
-    "dev": "npx serve public -l 3000"
+    "build": "tailwindcss -c tailwind.config.js -i src/tienda.css -o public/css/tienda.css --minify && tailwindcss -c tailwind.config.js -i src/admin.css -o public/css/admin.css --minify",
+    "watch": "tailwindcss -c tailwind.config.js -i src/tienda.css -o public/css/tienda.css --watch",
+    "dev": "npm run build && npx serve public -l 3000"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
   },
   "license": "MIT"
 }

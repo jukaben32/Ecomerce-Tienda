@@ -63,3 +63,12 @@ ecommerce-lab-backend*
 # Nunca subir llaves privadas de Supabase
 .env*
 *.pem
+
+# CSS compilado (lo genera "npm run build"; Vercel lo compila al desplegar)
+public/css/tienda.css
+public/css/admin.css
+node_modules/
+.vercel
+
+.vercel
+.env*

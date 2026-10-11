@@ -1,0 +1,19 @@
+/* src/tienda.css · estilos de la tienda (public/index.html)
+   Se compila a public/css/tienda.css con: npm run build */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Fondo liso de papel */
+  body { background-color: #F4EFE6; }
+  /* Fondo oscuro detrás de ventanas y paneles laterales */
+  dialog::backdrop { background: rgba(28, 26, 23, .55); backdrop-filter: blur(2px); }
+}
+
+@layer components {
+  .campo { @apply mt-1 block w-full rounded-xl border border-tinta/25 bg-white/60 px-4 py-2.5 text-base outline-none transition focus:border-arcilla focus:ring-2 focus:ring-arcilla/25; }
+  .boton-principal { @apply w-full rounded-full bg-tinta py-3 font-medium text-papel transition hover:bg-arcilla disabled:cursor-not-allowed disabled:opacity-50; }
+  .tab-btn { @apply -mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium text-tinta/60 transition hover:text-tinta; }
+  .tab-btn[aria-selected="true"] { @apply border-arcilla text-tinta; }
+}
