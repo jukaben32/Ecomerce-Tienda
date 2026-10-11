@@ -1,5 +1,7 @@
 # ModaNueva · Tienda online
 
+**En producción: https://modanueva.vercel.app**
+
 Tienda de ropa y accesorios hecha con **HTML + Tailwind CSS + JavaScript** y **Supabase** (Postgres + Auth + Storage). No tiene servidor propio: el navegador habla directo con Supabase y la seguridad la dan las reglas RLS de la base de datos.
 
 > Proyecto adaptado a partir de [Cristiancano1236/Ecommerce-node.js](https://github.com/Cristiancano1236/Ecommerce-node.js).
@@ -66,7 +68,8 @@ supabase/
    6. `supabase/migrations/006_clientes_sin_cuenta_y_precios.sql`
 2. **Conexión:** pon tu *Project URL* y *anon key* en `public/js/config.js`
    (Supabase > Project Settings > API). **Nunca** pongas la `service_role key` ahí.
-3. **Probar en local:** `npm run dev` y abre http://localhost:3000
+3. **Probar en local:** `npm install` y luego `npm run dev` (compila el CSS y abre http://localhost:3000).
+   Si cambias estilos, `npm run watch` recompila solo.
 4. **Crear tu admin:** regístrate en la tienda y luego, en el SQL Editor:
    ```sql
    update public.perfiles set rol = 'admin' where correo = '<tu-correo>';
@@ -155,6 +158,20 @@ Descarga la plantilla desde Productos > "Descargar plantilla". Columnas obligato
 - `supabase/schema.sql` trae valores de ejemplo en COP; la migración 005 los convierte a RD$.
 - Posibles mejoras futuras: notificar pedidos nuevos por WhatsApp, factura con comprobante fiscal (e-CF / NCF).
 
-## Publicarla
+## Publicación (Vercel)
 
-Es un sitio estático: sube la carpeta `public/` a Netlify, Vercel, Cloudflare Pages o GitHub Pages.
+Es un sitio estático. Vercel ejecuta `npm run build` (compila Tailwind a `public/css/`) y sirve la carpeta `public/`.
+El repositorio está conectado: **cada `git push` a `main` se publica solo**.
+
+`vercel.json` ya trae las cabeceras de seguridad (CSP estricta, HSTS, `nosniff`, `frame-ancestors 'none'`…), URLs limpias
+(`/admin`), `noindex` para el panel y la caché con revalidación.
+
+**Al cambiar de dominio** (por ejemplo uno propio como `mitienda.com`) hay que actualizar 4 sitios:
+1. Vercel > Project > Settings > Domains: agregar el dominio.
+2. Supabase > Authentication > URL Configuration: *Site URL* y *Redirect URLs*.
+3. Secreto `SITE_URLS` de las Edge Functions (a dónde vuelve Stripe tras pagar).
+4. `connect-src` en `vercel.json` solo cambia si cambias de proyecto Supabase.
+
+**Registro de clientes:** está sin confirmación de correo, porque el servidor de correo gratuito de Supabase solo envía
+2 correos por hora. Cuando conectes tu propio SMTP (Resend, SendGrid…) puedes activar «Confirm email» y la recuperación de
+contraseña en Supabase > Authentication.
