@@ -56,3 +56,6 @@ ecommerce-lab-backend*
 
 # Variables de entorno de ejemplo (opcional, descomenta si quieres ignorar)
 # .env.example
+
+# Variables de entorno reales (nunca subir al repo)
+.env
