@@ -5,10 +5,15 @@
 import { db } from './supabaseClient.js';
 import { SUPABASE_CONFIGURADO } from './config.js';
 import {
-  formatearPrecio, formatearFecha, escaparHtml, htmlImagenProducto,
+  formatearPrecio, escaparHtml, htmlImagenProducto,
   mostrarToast, abrirDialogo, cerrarDialogo, activarCierreDeDialogos,
   mostrarAvisoConfiguracion, mensajeDeError
 } from './util.js';
+import { cargarConfiguracion } from './configuracion.js';
+import { abrirCheckout, conectarCheckout } from './checkout.js';
+import { cargarMisCompras, conectarCompras } from './compras.js';
+import { cargarLibreta, conectarLibreta } from './direcciones.js';
+import { cargarPromociones, pintarBannerHorario, pintarDatosTienda } from './promos.js';
 
 const CLAVE_CARRITO = 'modanueva_carrito';
 
@@ -274,7 +279,7 @@ async function registrarse({ nombre, apellido, correo, telefono, password }) {
 // ---------------------------------------------------------------
 // Compra y "Mis compras"
 // ---------------------------------------------------------------
-async function finalizarCompra() {
+function finalizarCompra() {
   if (!carrito.length) {
     mostrarToast('Tu carrito está vacío.', true);
     return;
@@ -285,68 +290,25 @@ async function finalizarCompra() {
     abrirDialogo('dlgAuth');
     return;
   }
-  const btn = document.getElementById('btnPagar');
-  btn.disabled = true;
-  try {
-    // La función SQL calcula precios y stock en el servidor
-    const { data, error } = await db.rpc('crear_orden', { p_items: carrito });
-    if (error) throw error;
-    carrito = [];
-    guardarCarrito();
-    cerrarDialogo('dlgCarrito');
-    mostrarToast(`¡Pedido #${data.orden_id} creado por ${formatearPrecio(data.total)}!`);
-    await cargarProductos(); // el stock cambió
-  } catch (err) {
-    mostrarToast(mensajeDeError(err, 'No fue posible crear el pedido.'), true);
-    await cargarProductos().catch(() => {});
-    sanearCarrito();
-  } finally {
-    btn.disabled = carrito.length === 0;
-  }
-}
-
-async function cargarMisCompras() {
-  const lista = document.getElementById('listaCompras');
-  if (!usuario) {
-    lista.innerHTML = '<p class="text-tinta/60">Inicia sesión para ver tus compras.</p>';
-    return;
-  }
-  lista.innerHTML = '<p class="text-tinta/60">Cargando…</p>';
-  // .eq(cliente_id) hace falta para que un admin vea aquí solo SUS compras
-  const { data, error } = await db
-    .from('ordenes')
-    .select('id, estado, total, realizada_en, items_orden(sku, nombre_producto, precio_unitario, cantidad, total_renglon)')
-    .eq('cliente_id', usuario.id)
-    .order('realizada_en', { ascending: false });
-  if (error) {
-    lista.innerHTML = `<p class="text-arcilla">${escaparHtml(mensajeDeError(error))}</p>`;
-    return;
-  }
-  if (!data.length) {
-    lista.innerHTML = '<p class="text-tinta/60">Aún no tienes compras.</p>';
-    return;
-  }
-  lista.innerHTML = data
-    .map(
-      (o) => `
-      <article class="rounded-2xl border border-tinta/15 bg-white/50 p-4">
-        <header class="mb-3 flex items-baseline justify-between gap-3">
-          <div>
-            <h3 class="font-display text-lg font-bold">Pedido #${o.id}</h3>
-            <p class="text-xs text-tinta/60">${escaparHtml(formatearFecha(o.realizada_en))} · <span class="font-medium capitalize">${escaparHtml(o.estado)}</span></p>
-          </div>
-          <p class="font-display text-xl font-bold">${formatearPrecio(o.total)}</p>
-        </header>
-        <ul class="space-y-1 text-sm">
-          ${(o.items_orden ?? [])
-            .map(
-              (it) => `<li class="flex justify-between gap-3"><span>${it.cantidad} × ${escaparHtml(it.nombre_producto)}</span><span>${formatearPrecio(it.total_renglon)}</span></li>`
-            )
-            .join('')}
-        </ul>
-      </article>`
-    )
-    .join('');
+  cerrarDialogo('dlgCarrito');
+  abrirCheckout({
+    usuario,
+    perfil,
+    carrito,
+    subtotal: totalCarrito(),
+    // Pedido creado: vaciamos el carrito y refrescamos el stock
+    alExito: async (pedido) => {
+      carrito = [];
+      guardarCarrito();
+      const extra = pedido.fuera_de_horario ? ` ${pedido.mensaje_horario}` : '';
+      mostrarToast(`¡Pedido #${pedido.orden_id} creado por ${formatearPrecio(pedido.total)}!${extra}`);
+      await cargarProductos().catch(() => {});
+    },
+    alError: async () => {
+      await cargarProductos().catch(() => {});
+      sanearCarrito();
+    }
+  });
 }
 
 function rellenarFormularioPerfil() {
@@ -403,8 +365,11 @@ function conectarEventos() {
     mostrarToast('Sesión cerrada');
   });
   document.getElementById('btnPerfil').addEventListener('click', () => {
+    // Siempre abrimos en la primera pestaña ("Mis compras")
+    document.querySelector('[data-tabs="perfil"] [data-tab]').click();
     rellenarFormularioPerfil();
-    cargarMisCompras();
+    cargarMisCompras(usuario);
+    cargarLibreta(usuario.id);
     abrirDialogo('dlgPerfil');
   });
 
@@ -506,6 +471,9 @@ async function iniciar() {
   activarCierreDeDialogos();
   activarPestanas();
   conectarEventos();
+  conectarCheckout();
+  conectarCompras();
+  conectarLibreta(() => usuario.id);
   pintarCarrito();
 
   // Escuchamos cambios de sesión (login, logout, token renovado).
@@ -520,6 +488,15 @@ async function iniciar() {
       '<p class="col-span-full text-tinta/60">Conecta Supabase en js/config.js para ver los productos.</p>';
     return;
   }
+
+  // Horario, datos de contacto y volantes (si fallan, la tienda sigue funcionando)
+  cargarConfiguracion()
+    .then((cfg) => {
+      pintarBannerHorario(cfg);
+      pintarDatosTienda(cfg);
+    })
+    .catch(() => {});
+  cargarPromociones().catch(() => {});
 
   try {
     await Promise.all([cargarCategorias(), cargarProductos()]);

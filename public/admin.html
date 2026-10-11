@@ -70,137 +70,21 @@
     </form>
   </section>
 
-  <!-- Panel (solo visible para admin) -->
+  <!-- Panel (solo visible para admin). Cada pestaña la monta su módulo en js/admin/ -->
   <main id="panelAdmin" class="mx-auto hidden max-w-6xl px-4 py-8">
-    <div class="flex gap-1 overflow-x-auto border-b border-tinta/15" role="tablist" data-tabs="admin">
-      <button type="button" role="tab" data-tab="ordenes" class="tab-btn">Órdenes</button>
-      <button type="button" role="tab" data-tab="productos" class="tab-btn">Productos</button>
-      <button type="button" role="tab" data-tab="categorias" class="tab-btn">Categorías</button>
-      <button type="button" role="tab" data-tab="usuarios" class="tab-btn">Usuarios</button>
-    </div>
-
-    <!-- ===== Órdenes ===== -->
-    <section data-panel="ordenes" data-grupo="admin" class="pt-6">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div id="filtrosEstado" class="flex flex-wrap gap-2">
-          <button type="button" data-estado="pendiente" class="pildora">Pendientes</button>
-          <button type="button" data-estado="procesando" class="pildora">Procesando</button>
-          <button type="button" data-estado="terminada" class="pildora">Terminadas</button>
-          <button type="button" data-estado="todas" class="pildora">Todas</button>
-        </div>
-        <div class="flex gap-2">
-          <input id="busquedaOrdenes" type="search" placeholder="Buscar cliente…" class="campo !mt-0 w-56" aria-label="Buscar órdenes por cliente">
-          <button id="btnRefrescar" type="button" class="boton-sec">Actualizar</button>
-        </div>
-      </div>
-      <div class="overflow-x-auto rounded-2xl border border-tinta/15 bg-white/50">
-        <table class="tabla w-full">
-          <thead><tr><th>#</th><th>Cliente</th><th>Estado</th><th>Fecha</th><th>Total</th><th></th></tr></thead>
-          <tbody id="tbodyOrdenes"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ===== Productos ===== -->
-    <section data-panel="productos" data-grupo="admin" class="hidden pt-6">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-wrap gap-2">
-          <button id="btnNuevoProducto" type="button" class="boton-principal">+ Nuevo producto</button>
-          <form id="formDescuentoProductos" class="flex items-center gap-2">
-            <input name="porcentaje" type="number" min="0" max="100" step="0.01" placeholder="% desc." class="campo !mt-0 w-24" aria-label="Porcentaje de descuento">
-            <select name="activar" class="campo !mt-0 w-32" aria-label="Acción"><option value="1">Activar</option><option value="0">Desactivar</option></select>
-            <button type="submit" class="boton-sec">Descuento masivo</button>
-          </form>
-        </div>
-        <input id="busquedaProductos" type="search" placeholder="Buscar nombre o SKU…" class="campo !mt-0 w-56" aria-label="Buscar productos">
-      </div>
-      <div class="overflow-x-auto rounded-2xl border border-tinta/15 bg-white/50">
-        <table class="tabla w-full">
-          <thead><tr><th>SKU</th><th>Nombre</th><th class="text-right">Precio</th><th class="text-right">Stock</th><th>Activo</th><th></th></tr></thead>
-          <tbody id="tbodyProductos"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ===== Categorías ===== -->
-    <section data-panel="categorias" data-grupo="admin" class="hidden pt-6">
-      <div class="grid gap-6 lg:grid-cols-5">
-        <div class="lg:col-span-3">
-          <form id="formDescuentoCategorias" class="mb-4 flex items-center gap-2">
-            <input name="porcentaje" type="number" min="0" max="100" step="0.01" placeholder="% desc." class="campo !mt-0 w-24" aria-label="Porcentaje de descuento">
-            <select name="activar" class="campo !mt-0 w-32" aria-label="Acción"><option value="1">Activar</option><option value="0">Desactivar</option></select>
-            <button type="submit" class="boton-sec">Descuento a todas</button>
-          </form>
-          <div class="overflow-x-auto rounded-2xl border border-tinta/15 bg-white/50">
-            <table class="tabla w-full">
-              <thead><tr><th>Nombre</th><th>Slug</th><th>Activa</th><th>Desc.</th><th></th></tr></thead>
-              <tbody id="tbodyCategorias"></tbody>
-            </table>
-          </div>
-        </div>
-        <form id="formCategoria" class="space-y-3 rounded-2xl border border-tinta/15 bg-white/50 p-5 lg:col-span-2">
-          <h2 class="font-display text-xl font-bold" id="tituloFormCategoria">Nueva categoría</h2>
-          <input type="hidden" name="id">
-          <label class="block text-sm font-medium">Nombre <input name="nombre" required maxlength="100" class="campo"></label>
-          <label class="block text-sm font-medium">Slug <input name="slug" required maxlength="100" pattern="[a-z0-9\-]+" title="Solo minúsculas, números y guiones" class="campo"></label>
-          <label class="block text-sm font-medium">Descripción <textarea name="descripcion" rows="2" maxlength="300" class="campo"></textarea></label>
-          <div class="grid grid-cols-3 gap-2">
-            <label class="block text-sm font-medium">Activa
-              <select name="activo" class="campo"><option value="1">Sí</option><option value="0">No</option></select></label>
-            <label class="block text-sm font-medium">Desc. %
-              <input name="descuento_pct" type="number" min="0" max="100" step="0.01" class="campo"></label>
-            <label class="block text-sm font-medium">Descuento
-              <select name="descuento_activo" class="campo"><option value="0">Off</option><option value="1">On</option></select></label>
-          </div>
-          <div class="flex gap-2">
-            <button type="submit" class="boton-principal">Guardar</button>
-            <button id="btnNuevaCategoria" type="button" class="boton-sec">Limpiar</button>
-          </div>
-        </form>
-      </div>
-    </section>
-
-    <!-- ===== Usuarios ===== -->
-    <section data-panel="usuarios" data-grupo="admin" class="hidden pt-6">
-      <p class="mb-4 text-sm text-tinta/60">Los clientes se registran solos desde la tienda. Aquí puedes ascender a alguien a administrador.</p>
-      <div class="overflow-x-auto rounded-2xl border border-tinta/15 bg-white/50">
-        <table class="tabla w-full">
-          <thead><tr><th>Nombre</th><th>Correo</th><th>Registro</th><th>Rol</th></tr></thead>
-          <tbody id="tbodyUsuarios"></tbody>
-        </table>
-      </div>
-    </section>
+    <div id="barraPestanas" class="flex gap-1 overflow-x-auto border-b border-tinta/15" role="tablist" aria-label="Secciones del panel"></div>
+    <div id="zonaPaneles"></div>
   </main>
 
-  <!-- Producto: crear / editar -->
-  <dialog id="dlgProducto" class="m-auto w-[min(94vw,40rem)] rounded-3xl bg-papel p-0 text-tinta shadow-2xl">
-    <form id="formProducto" class="space-y-4 p-6">
-      <div class="flex items-center justify-between">
-        <h2 id="tituloProducto" class="font-display text-2xl font-bold">Nuevo producto</h2>
+  <!-- Selector de imágenes (lo usan Productos y Promociones) -->
+  <dialog id="dlgMedios" class="m-auto w-[min(94vw,44rem)] rounded-3xl bg-papel p-0 text-tinta shadow-2xl">
+    <div class="p-6">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="font-display text-2xl font-bold">Elige una imagen</h2>
         <button type="button" data-cerrar class="rounded-full px-3 py-1 text-sm hover:bg-crema" aria-label="Cerrar">✕</button>
       </div>
-      <input type="hidden" name="id">
-      <div class="grid gap-3 sm:grid-cols-3">
-        <label class="block text-sm font-medium">SKU <input name="sku" required maxlength="64" class="campo"></label>
-        <label class="block text-sm font-medium sm:col-span-2">Nombre <input name="nombre" required maxlength="200" class="campo"></label>
-      </div>
-      <label class="block text-sm font-medium">Descripción <textarea name="descripcion" rows="2" maxlength="600" class="campo"></textarea></label>
-      <div class="grid gap-3 sm:grid-cols-3">
-        <label class="block text-sm font-medium">Categoría <select name="categoria_id" id="selCategoria" class="campo"></select></label>
-        <label class="block text-sm font-medium">Precio (COP) <input name="precio" type="number" min="0" step="1" required class="campo"></label>
-        <label class="block text-sm font-medium">Existencias <input name="existencias" type="number" min="0" step="1" required value="0" class="campo"></label>
-      </div>
-      <div class="grid gap-3 sm:grid-cols-3">
-        <label class="block text-sm font-medium">Activo <select name="activo" class="campo"><option value="1">Sí</option><option value="0">No</option></select></label>
-        <label class="block text-sm font-medium">Descuento % <input name="descuento_pct" type="number" min="0" max="100" step="0.01" class="campo"></label>
-        <label class="block text-sm font-medium">Descuento <select name="descuento_activo" class="campo"><option value="0">Off</option><option value="1">On</option></select></label>
-      </div>
-      <label class="block text-sm font-medium">URL de la imagen (opcional) <input name="imagen_url" type="url" placeholder="https://…" class="campo"></label>
-      <div class="flex justify-end gap-2 pt-2">
-        <button type="button" data-cerrar class="boton-sec">Cancelar</button>
-        <button type="submit" class="boton-principal">Guardar producto</button>
-      </div>
-    </form>
+      <div id="gridSelectorMedios" class="grid max-h-[60vh] grid-cols-3 gap-3 overflow-y-auto sm:grid-cols-4"></div>
+    </div>
   </dialog>
 
   <script type="module" src="/js/admin.js"></script>
