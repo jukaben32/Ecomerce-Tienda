@@ -10,6 +10,7 @@ import {
   cargarConfiguracion, ETIQUETAS_PAGO, calcularEnvio, estaEnHorario, textoHorario
 } from './configuracion.js';
 import { listarDirecciones, guardarDireccion, direccionEnTexto } from './direcciones.js';
+import { irAPagar } from './api.js';
 
 let contexto = null;        // { usuario, perfil, carrito, subtotal } al abrir
 let direcciones = [];
@@ -164,6 +165,8 @@ async function confirmar(ev) {
     if (error) throw error;
     cerrarDialogo('dlgCheckout');
     contexto.alExito(data);
+    // Pago con tarjeta: llevamos al cliente a la página segura de Stripe
+    if (f.pago.value === 'tarjeta') await irAPagar(data.orden_id);
   } catch (err) {
     mostrarToast(mensajeDeError(err, 'No fue posible crear el pedido.'), true);
     contexto.alError?.();

@@ -142,6 +142,33 @@
     </div>
   </footer>
 
+  <!-- ============ Asistente con IA ============ -->
+  <button id="btnChat" type="button" class="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-arcilla px-5 py-3 text-sm font-medium text-white shadow-xl transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinta" aria-label="Abrir el asistente de ventas">
+    <span aria-hidden="true">✦</span> Asistente
+  </button>
+
+  <dialog id="dlgChat" class="m-0 ml-auto h-full max-h-none w-full max-w-md bg-papel p-0 text-tinta shadow-2xl">
+    <div class="flex h-full flex-col">
+      <div class="flex items-center justify-between border-b border-tinta/15 px-5 py-4">
+        <div>
+          <h2 class="font-display text-2xl font-bold">Asistente</h2>
+          <p class="text-xs text-tinta/60">Armo tu pedido y leo tu lista en foto</p>
+        </div>
+        <button type="button" data-cerrar class="rounded-full px-3 py-1 text-sm hover:bg-crema" aria-label="Cerrar asistente">Cerrar ✕</button>
+      </div>
+      <div id="mensajesChat" class="flex-1 space-y-3 overflow-y-auto bg-crema/40 px-4 py-4" aria-live="polite"></div>
+      <form id="formChat" class="border-t border-tinta/15 px-4 py-3">
+        <div id="adjuntoChat" class="mb-2 hidden"></div>
+        <div class="flex items-end gap-2">
+          <button id="btnAdjuntarChat" type="button" class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-tinta/30 text-lg transition hover:bg-tinta hover:text-papel" aria-label="Adjuntar foto de la lista" title="Adjuntar foto">📎</button>
+          <input id="archivoChat" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+          <input id="entradaChat" maxlength="2000" autocomplete="off" placeholder="Escribe tu pedido o una pregunta…" class="campo !mt-0 !rounded-full" aria-label="Mensaje">
+          <button type="submit" class="boton-principal !w-auto shrink-0 px-5">Enviar</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
   <!-- ============ Carrito (panel lateral) ============ -->
   <dialog id="dlgCarrito" class="m-0 ml-auto h-full max-h-none w-full max-w-md bg-papel p-0 text-tinta shadow-2xl">
     <div class="flex h-full flex-col">

@@ -7,6 +7,7 @@ import {
   abrirDialogo, cerrarDialogo, mensajeDeError
 } from './util.js';
 import { ETIQUETAS_PAGO } from './configuracion.js';
+import { irAPagar } from './api.js';
 
 let usuarioActual = null;
 let ordenACalificar = null;
@@ -26,6 +27,8 @@ function tarjetaPedido(o, calificacion) {
   let pie = '';
   if (calificacion) {
     pie = `<p class="mt-3 text-sm"><span class="text-arcilla" aria-label="${calificacion.estrellas} de 5 estrellas">${estrellas(calificacion.estrellas)}</span> <span class="text-tinta/60">Tu calificación</span></p>`;
+  } else if (o.estado === 'pendiente' && o.metodo_pago === 'tarjeta') {
+    pie = `<button type="button" data-pagar="${o.id}" class="mt-3 rounded-full bg-arcilla px-4 py-1.5 text-sm font-medium text-white transition hover:brightness-110">Pagar ahora</button>`;
   } else if (o.estado === 'entregada') {
     pie = `<button type="button" data-calificar="${o.id}" class="mt-3 rounded-full border border-tinta px-4 py-1.5 text-sm font-medium transition hover:bg-tinta hover:text-papel">Calificar pedido</button>`;
   }
@@ -88,6 +91,14 @@ function pintarEstrellas() {
 
 export function conectarCompras() {
   $('listaCompras').addEventListener('click', (ev) => {
+    const pagar = ev.target.closest('[data-pagar]');
+    if (pagar) {
+      pagar.disabled = true;
+      irAPagar(Number(pagar.dataset.pagar)).finally(() => {
+        pagar.disabled = false;
+      });
+      return;
+    }
     const b = ev.target.closest('[data-calificar]');
     if (!b) return;
     ordenACalificar = Number(b.dataset.calificar);

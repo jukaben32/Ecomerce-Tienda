@@ -100,7 +100,7 @@ export function montar() {
         </div>
         <label class="block text-sm font-medium">Instrucciones de transferencia
           <textarea name="instrucciones_transferencia" rows="3" maxlength="500" placeholder="Banco, tipo y número de cuenta, titular…" class="campo"></textarea></label>
-        <p class="text-xs text-tinta/60">El pago con tarjeta en línea (Wompi, Mercado Pago…) se conecta en una fase posterior.</p>
+        <p class="text-xs text-tinta/60">Activa «Tarjeta» solo cuando Stripe esté configurado (llaves en Supabase). Si no, los clientes verían un error al pagar.</p>
       </section>
 
       <section class="space-y-3 rounded-2xl border border-tinta/15 bg-white/50 p-5 lg:col-span-2">

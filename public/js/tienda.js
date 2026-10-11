@@ -14,6 +14,7 @@ import { abrirCheckout, conectarCheckout } from './checkout.js';
 import { cargarMisCompras, conectarCompras } from './compras.js';
 import { cargarLibreta, conectarLibreta } from './direcciones.js';
 import { cargarPromociones, pintarBannerHorario, pintarDatosTienda } from './promos.js';
+import { conectarChat } from './chat.js';
 
 const CLAVE_CARRITO = 'modanueva_carrito';
 
@@ -107,6 +108,42 @@ function cambiarCantidad(productoId, delta) {
   guardarCarrito();
 }
 
+/**
+ * Aplica lo que el asistente de IA agregó. Respeta el stock y devuelve cuántos
+ * productos distintos se agregaron.
+ */
+function agregarDesdeChat(acciones) {
+  let agregados = 0;
+  for (const accion of acciones) {
+    const p = productoPorId(Number(accion.producto_id));
+    const cantidad = Number(accion.cantidad);
+    if (!p || !Number.isInteger(cantidad) || cantidad < 1) continue;
+    const actual = carrito.find((it) => it.producto_id === p.id)?.cantidad ?? 0;
+    const nueva = Math.min(actual + cantidad, p.existencias);
+    if (nueva <= actual) continue;
+    carrito = actual
+      ? carrito.map((it) => (it.producto_id === p.id ? { ...it, cantidad: nueva } : it))
+      : [...carrito, { producto_id: p.id, cantidad: nueva }];
+    agregados += 1;
+  }
+  guardarCarrito();
+  return agregados;
+}
+
+/** Mensaje al volver de la página de pago de Stripe (?pago=exito|cancelado&orden=N). */
+function avisarResultadoDePago() {
+  const params = new URLSearchParams(window.location.search);
+  const resultado = params.get('pago');
+  if (!resultado) return;
+  const orden = Number(params.get('orden')) || '';
+  if (resultado === 'exito') {
+    mostrarToast(`¡Gracias! Estamos confirmando el pago del pedido #${orden}. Se verá como "pagada" en unos segundos.`);
+  } else if (resultado === 'cancelado') {
+    mostrarToast(`Pago cancelado. Tu pedido #${orden} sigue pendiente; puedes pagarlo desde "Mis compras".`, true);
+  }
+  window.history.replaceState({}, '', window.location.pathname); // limpia la URL
+}
+
 function quitarDelCarrito(productoId) {
   carrito = carrito.filter((it) => it.producto_id !== productoId);
   guardarCarrito();
@@ -197,9 +234,12 @@ function tarjetaProducto(p) {
 function pintarProductos() {
   const grid = document.getElementById('gridProductos');
   const q = document.getElementById('busqueda').value.trim().toLowerCase();
-  const lista = q
-    ? productos.filter((p) => [p.nombre, p.descripcion, p.sku].filter(Boolean).join(' ').toLowerCase().includes(q))
+  const porCategoria = categoriaSeleccionada
+    ? productos.filter((p) => p.categoria_id === categoriaSeleccionada)
     : productos;
+  const lista = q
+    ? porCategoria.filter((p) => [p.nombre, p.descripcion, p.sku].filter(Boolean).join(' ').toLowerCase().includes(q))
+    : porCategoria;
 
   grid.innerHTML = lista.length
     ? lista.map(tarjetaProducto).join('')
@@ -216,13 +256,16 @@ async function cargarCategorias() {
   pintarFiltros();
 }
 
+/**
+ * Carga el catálogo COMPLETO una vez. El filtro por categoría se hace en el
+ * navegador; así el carrito (y el chat) siempre encuentran cualquier producto.
+ */
 async function cargarProductos() {
-  let consulta = db.from('productos_publicos').select('*').eq('activo', true).order('nombre');
-  if (categoriaSeleccionada) consulta = consulta.eq('categoria_id', categoriaSeleccionada);
-  const { data, error } = await consulta;
+  const { data, error } = await db.from('productos_publicos').select('*').eq('activo', true).order('nombre');
   if (error) throw error;
   productos = data ?? [];
   pintarProductos();
+  pintarCarrito();
 }
 
 // ---------------------------------------------------------------
@@ -390,16 +433,12 @@ function conectarEventos() {
   });
 
   // Filtro por categoría
-  document.getElementById('filtrosCategoria').addEventListener('click', async (ev) => {
+  document.getElementById('filtrosCategoria').addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-categoria]');
     if (!b) return;
     categoriaSeleccionada = b.dataset.categoria ? Number(b.dataset.categoria) : null;
     pintarFiltros();
-    try {
-      await cargarProductos();
-    } catch (err) {
-      mostrarToast(mensajeDeError(err, 'No se pudieron cargar los productos.'), true);
-    }
+    pintarProductos();
   });
 
   document.getElementById('busqueda').addEventListener('input', pintarProductos);
@@ -474,7 +513,15 @@ async function iniciar() {
   conectarCheckout();
   conectarCompras();
   conectarLibreta(() => usuario.id);
+  conectarChat({
+    obtenerUsuario: () => usuario,
+    obtenerCarrito: () => carrito,
+    abrirLogin: () => abrirDialogo('dlgAuth'),
+    agregarAlCarrito: agregarDesdeChat,
+    abrirCarrito: () => abrirDialogo('dlgCarrito')
+  });
   pintarCarrito();
+  avisarResultadoDePago();
 
   // Escuchamos cambios de sesión (login, logout, token renovado).
   // Importante: no usamos await de Supabase dentro del callback; lo

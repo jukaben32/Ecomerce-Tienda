@@ -4,6 +4,7 @@
 import { db } from '../supabaseClient.js';
 import { formatearPrecio, formatearFecha, escaparHtml, mostrarToast } from '../util.js';
 import { cargarConfiguracion, ETIQUETAS_PAGO } from '../configuracion.js';
+import { invocarFuncion } from '../api.js';
 import { $, seguro, filaMensaje } from './nucleo.js';
 
 const ESTADOS = ['pendiente', 'pagada', 'enviada', 'entregada', 'cancelada', 'reembolsada'];
@@ -76,6 +77,7 @@ function pintar() {
           <td class="whitespace-nowrap">${escaparHtml(formatearFecha(o.realizada_en))}</td>
           <td class="font-medium">${formatearPrecio(o.total)}</td>
           <td class="whitespace-nowrap text-right">
+            ${o.estado === 'pendiente' ? `<button type="button" data-link-pago="${o.id}" class="boton-sec !px-3 !py-1" title="Genera un link de pago de Stripe para enviarlo al cliente">Link de pago</button>` : ''}
             <button type="button" data-ticket="${o.id}" class="boton-sec !px-3 !py-1">Ticket</button>
             <button type="button" data-detalle="${o.id}" class="boton-sec !px-3 !py-1" aria-expanded="false">Ver</button>
           </td>
@@ -101,6 +103,17 @@ async function cambiarEstado(id, estado) {
   if (error) throw error;
   mostrarToast(`Orden #${id} → ${estado}`);
   await cargar();
+}
+
+/** Genera el link de pago de Stripe de una orden pendiente y lo copia al portapapeles. */
+async function copiarLinkDePago(id) {
+  const { url } = await invocarFuncion('crear-pago', { orden_id: id });
+  try {
+    await navigator.clipboard.writeText(url);
+    mostrarToast(`Link de pago del pedido #${id} copiado. Envíaselo al cliente.`);
+  } catch {
+    window.prompt('Copia el link de pago:', url); // si el navegador bloquea el portapapeles
+  }
 }
 
 /** Imprime el ticket de una orden en un iframe oculto (sin ventanas emergentes). */
@@ -186,6 +199,8 @@ export function montar() {
       verDetalle.textContent = oculto ? 'Ver' : 'Ocultar';
     }
     if (ticket) seguro(() => imprimirTicket(Number(ticket.dataset.ticket)));
+    const linkPago = ev.target.closest('[data-link-pago]');
+    if (linkPago) seguro(() => copiarLinkDePago(Number(linkPago.dataset.linkPago)));
   });
   $('tbodyOrdenes').addEventListener('change', (ev) => {
     const s = ev.target.closest('[data-estado-orden]');

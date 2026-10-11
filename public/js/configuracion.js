@@ -9,7 +9,7 @@ const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', '
 export const ETIQUETAS_PAGO = {
   efectivo: 'Efectivo contra entrega',
   transferencia: 'Transferencia bancaria',
-  tarjeta: 'Tarjeta (datáfono al entregar)',
+  tarjeta: 'Tarjeta de crédito o débito (pago en línea)',
   link_pago: 'Link de pago'
 };
 
